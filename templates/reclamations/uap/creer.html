@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Nouvelle UAP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Nouvelle UAP</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="nom" class="form-label">Nom de l'UAP *</label>
+                            <input type="text" class="form-control" id="nom" name="nom" required autofocus>
+                            <div class="form-text">Exemple: UAP Logistique, UAP Production, etc.</div>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Créer
+                            </button>
+                            <a href="{% url 'reclamations:liste_uap' %}" class="btn btn-secondary">
+                                Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

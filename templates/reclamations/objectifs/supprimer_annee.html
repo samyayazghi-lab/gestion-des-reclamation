@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Supprimer les objectifs {{ annee }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Confirmer la suppression</h5>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Êtes-vous sûr de vouloir supprimer tous les objectifs pour l'année <strong>{{ annee }}</strong> ?</p>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Récapitulatif :</strong>
+                        <ul class="mt-2 mb-0">
+                            <li><strong>Année :</strong> {{ annee }}</li>
+                            <li><strong>Nombre de sites :</strong> {{ objectifs|length }}</li>
+                            <li><strong>Sites concernés :</strong>
+                                <ul>
+                                    {% for obj in objectifs|slice:":5" %}
+                                    <li>{{ obj.site.nom }}</li>
+                                    {% endfor %}
+                                    {% if objectifs|length > 5 %}
+                                    <li>... et {{ objectifs|length|add:"-5" }} autre(s)</li>
+                                    {% endif %}
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <strong>Attention !</strong> Cette action est irréversible.
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Oui, supprimer
+                            </button>
+                            <a href="{% url 'reclamations:liste_objectifs' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Modifier Site - {{ site.nom }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-edit"></i> Modifier Site</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="nom" class="form-label">Nom du site *</label>
+                            <input type="text" class="form-control" id="nom" 
+                                   name="nom" value="{{ site.nom }}" required>
+                            <div class="form-text">Exemple: Site de Paris, Site de Lyon, etc.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="uap" class="form-label">UAP *</label>
+                            <select class="form-control" id="uap" name="uap" required>
+                                <option value="">Sélectionnez une UAP</option>
+                                {% for uap in uaps %}
+                                <option value="{{ uap.id }}" {% if site.uap.id == uap.id %}selected{% endif %}>
+                                    {{ uap.nom }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Unité Autonome de Production</div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Informations :</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Clients associés: <strong>{{ site.clients.count }}</strong></li>
+                                <li>Réclamations: <strong>{{ site.clients.count_reclamations }}</strong></li>
+                                <li>Date création: <strong>{{ site.date_creation|date:"d/m/Y" }}</strong></li>
+                            </ul>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Enregistrer
+                            </button>
+                            <a href="{% url 'reclamations:liste_sites' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

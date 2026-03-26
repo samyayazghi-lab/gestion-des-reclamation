@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Importer des clients depuis Excel{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-excel"></i> Importer des clients depuis Excel</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="excel_file" class="form-label">Fichier Excel</label>
+                            <input type="file" class="form-control" id="excel_file" name="excel_file" 
+                                   accept=".xlsx,.xls" required>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> Format du fichier :</h6>
+                            <ul>
+                                <li><strong>nom</strong> (obligatoire) - Nom du client</li>
+                                <li><strong>email</strong> (optionnel) - Email</li>
+                                <li><strong>telephone</strong> (optionnel) - Téléphone</li>
+                                <li><strong>actif</strong> (optionnel) - Statut (Oui/Non)</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-upload"></i> Importer
+                            </button>
+                            <a href="{% url 'reclamations:liste_clients' %}" class="btn btn-secondary">
+                                Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

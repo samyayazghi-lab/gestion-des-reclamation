@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Supprimer le programme - {{ programme.nom }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Confirmer la suppression</h5>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Êtes-vous sûr de vouloir supprimer le programme <strong>{{ programme.nom }}</strong> ?</p>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Informations du programme :</strong>
+                        <ul class="mt-2 mb-0">
+                            <li><strong>Nom:</strong> {{ programme.nom }}</li>
+                            <li><strong>Description:</strong> {{ programme.description|default:"-" }}</li>
+                            <li><strong>Statut:</strong> {% if programme.actif %}Actif{% else %}Inactif{% endif %}</li>
+                            <li><strong>Clients associés:</strong> {{ programme.clients.count }}</li>
+                            <li><strong>Réclamations:</strong> {{ programme.reclamations.count }}</li>
+                            <li><strong>Date création:</strong> {{ programme.date_creation|date:"d/m/Y" }}</li>
+                        </ul>
+                    </div>
+                    
+                    {% if programme.reclamations.exists %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <strong>Attention !</strong> Ce programme est utilisé dans 
+                        {{ programme.reclamations.count }} réclamation(s).<br>
+                        Vous ne pouvez pas supprimer ce programme tant que ces réclamations existent.
+                        <div class="mt-2">
+                            <small>Réclamations concernées :</small>
+                            <ul>
+                                {% for rec in programme.reclamations.all|slice:":5" %}
+                                <li>{{ rec.numero_reclamation }} - {{ rec.date_reclamation|date:"d/m/Y" }}</li>
+                                {% endfor %}
+                                {% if programme.reclamations.count > 5 %}
+                                <li>... et {{ programme.reclamations.count|add:"-5" }} autre(s)</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <strong>Attention !</strong> Cette action est irréversible.
+                        {% if programme.clients.exists %}
+                        <br>Les associations avec les clients seront également supprimées.
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="text-center">
+                            {% if programme.reclamations.exists %}
+                            <a href="{% url 'reclamations:liste_programmes' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-arrow-left"></i> Retour à la liste
+                            </a>
+                            {% else %}
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-trash"></i> Oui, supprimer définitivement
+                            </button>
+                            <a href="{% url 'reclamations:liste_programmes' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times"></i> Annuler
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Supprimer UAP - {{ uap.nom }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Confirmer la suppression</h5>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Êtes-vous sûr de vouloir supprimer l'UAP <strong>{{ uap.nom }}</strong> ?</p>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Informations de l'UAP :</strong>
+                        <ul class="mt-2 mb-0">
+                            <li><strong>Nom:</strong> {{ uap.nom }}</li>
+                            <li><strong>Sites associés:</strong> {{ uap.sites.count }}</li>
+                            <li><strong>Date création:</strong> {{ uap.date_creation|date:"d/m/Y H:i" }}</li>
+                        </ul>
+                    </div>
+                    
+                    {% if uap.sites.exists %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <strong>Attention !</strong> Cette UAP a {{ uap.sites.count }} site(s) associé(s).<br>
+                        Vous ne pouvez pas supprimer cette UAP tant que ces sites existent.
+                        <div class="mt-2">
+                            <small>Sites concernés :</small>
+                            <ul>
+                                {% for site in uap.sites.all|slice:":5" %}
+                                <li>{{ site.nom }} ({{ site.clients.count }} client(s))</li>
+                                {% endfor %}
+                                {% if uap.sites.count > 5 %}
+                                <li>... et {{ uap.sites.count|add:"-5" }} autre(s)</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <strong>Attention !</strong> Cette action est irréversible.
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="text-center">
+                            {% if uap.sites.exists %}
+                            <a href="{% url 'reclamations:liste_uap' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-arrow-left"></i> Retour à la liste
+                            </a>
+                            {% else %}
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-trash"></i> Oui, supprimer définitivement
+                            </button>
+                            <a href="{% url 'reclamations:liste_uap' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times"></i> Annuler
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

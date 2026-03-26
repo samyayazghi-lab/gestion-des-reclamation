@@ -1,0 +1,355 @@
+{% extends 'base.html' %}
+
+{% block title %}Importer des réclamations depuis Excel{% endblock %}
+
+{% block extra_css %}
+<style>
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        position: relative;
+    }
+    .step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+    }
+    .step-number {
+        width: 40px;
+        height: 40px;
+        background-color: #e9ecef;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-bottom: 10px;
+        transition: all 0.3s;
+    }
+    .step.active .step-number {
+        background-color: #007bff;
+        color: white;
+    }
+    .step.completed .step-number {
+        background-color: #28a745;
+        color: white;
+    }
+    .step-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    .step.active .step-label {
+        color: #007bff;
+        font-weight: bold;
+    }
+    .step.completed .step-label {
+        color: #28a745;
+    }
+    .step-indicator::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: #e9ecef;
+        z-index: 0;
+    }
+    .preview-table {
+        max-height: 500px;
+        overflow-y: auto;
+        font-size: 0.85rem;
+    }
+    .badge-produit {
+        background-color: #6c757d;
+        color: white;
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin: 2px;
+        display: inline-block;
+    }
+    .badge-required {
+        background-color: #dc3545;
+        color: white;
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin-left: 5px;
+    }
+    .badge-optional {
+        background-color: #6c757d;
+        color: white;
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin-left: 5px;
+    }
+    .produits-list {
+        max-width: 200px;
+        word-break: break-all;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="fas fa-file-import text-success"></i> Importer des réclamations</h1>
+            <p class="text-muted">Importez des réclamations à partir d'un fichier Excel (supporte plusieurs produits par ligne)</p>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'reclamations:liste' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour
+            </a>
+        </div>
+    </div>
+
+    <!-- Indicateur d'étape -->
+    <div class="step-indicator mb-5">
+        <div class="step {% if step == 1 %}active{% elif step > 1 %}completed{% endif %}">
+            <div class="step-number">1</div>
+            <div class="step-label">Télécharger le fichier</div>
+        </div>
+        <div class="step {% if step == 2 %}active{% elif step > 2 %}completed{% endif %}">
+            <div class="step-number">2</div>
+            <div class="step-label">Aperçu et validation</div>
+        </div>
+        <div class="step {% if step == 3 %}active{% endif %}">
+            <div class="step-number">3</div>
+            <div class="step-label">Résultat de l'import</div>
+        </div>
+    </div>
+
+    {% if step == 1 or not step %}
+    <!-- Étape 1: Télécharger le fichier -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-upload"></i> Étape 1 : Sélectionner le fichier Excel</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" id="uploadForm">
+                {% csrf_token %}
+                <input type="hidden" name="step" value="1">
+                
+                <div class="mb-4">
+                    <label for="excel_file" class="form-label">Fichier Excel <span class="text-danger">*</span></label>
+                    <input type="file" class="form-control" id="excel_file" name="excel_file" 
+                           accept=".xlsx,.xls" required>
+                    <div class="form-text">Formats acceptés: .xlsx, .xls (taille max: 10 Mo)</div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle"></i> Format du fichier Excel attendu :</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Colonne</th>
+                                    <th>Description</th>
+                                    <th>Obligatoire</th>
+                                 </thead>
+                            <tbody>
+                                <tr><td><code>numero_reclamation</code></td><td>Numéro unique</td><td><span class="badge-required">Oui</span></td></tr>
+                                <tr><td><code>date_reclamation</code></td><td>Date (YYYY-MM-DD)</td><td><span class="badge-required">Oui</span></td></tr>
+                                <tr><td><code>client</code></td><td>Nom du client</td><td><span class="badge-required">Oui</span></td></tr>
+                                <tr><td><code>site</code></td><td>Site usine</td><td><span class="badge-required">Oui</span></td></tr>
+                                <tr><td><code>produit</code></td><td>Référence(s) produit</td><td><span class="badge-required">Oui</span></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="mt-2 mb-0"><small>Pour plusieurs produits, séparez-les par virgule, point-virgule ou saut de ligne</small></p>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-outline-primary" id="downloadTemplate">
+                            <i class="fas fa-download"></i> Télécharger le modèle
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-arrow-right"></i> Suivant
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if step == 2 and preview_data %}
+    <!-- Étape 2: Aperçu des données -->
+    <div class="card">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0"><i class="fas fa-eye"></i> Étape 2 : Aperçu des données</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <strong>{{ preview_data|length }}</strong> ligne(s) trouvée(s)
+            </div>
+            
+            <div class="preview-table">
+                <table class="table table-sm table-striped table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>N° Réclamation</th>
+                            <th>Date</th>
+                            <th>Client</th>
+                            <th>Site</th>
+                            <th>Produits</th>
+                            <th>Qté</th>
+                            <th>Statut</th>
+                         </thead>
+                    <tbody>
+                        {% for row in preview_data %}
+                        <tr class="{% if row.erreurs %}table-danger{% endif %}">
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td><strong>{{ row.numero_reclamation }}</strong></td>
+                            <td>{{ row.date_reclamation }}</td>
+                            <td>{{ row.client_nom }}</td>
+                            <td>{{ row.site_nom }}</td>
+                            <td class="produits-list">
+                                {% for p in row.produits %}
+                                <span class="badge-produit">{{ p }}</span>
+                                {% endfor %}
+                            </td>
+                            <td class="text-end">{{ row.quantite }}</td>
+                            <td>
+                                {% if row.erreurs %}
+                                <span class="badge bg-danger" title="{{ row.erreurs|join:'; ' }}">
+                                    {{ row.erreurs|length }} erreur(s)
+                                </span>
+                                {% else %}
+                                <span class="badge bg-success">Valide</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <form method="post" class="mt-4">
+                {% csrf_token %}
+                <input type="hidden" name="step" value="2">
+                <input type="hidden" name="confirm_import" value="1">
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Attention :</strong> Les lignes valides seront importées.
+                    Les lignes en erreur seront ignorées.
+                </div>
+                
+                <div class="text-center">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="fas fa-check"></i> Confirmer l'import
+                    </button>
+                    <a href="{% url 'reclamations:import_reclamations' %}" class="btn btn-secondary btn-lg">
+                        Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if step == 3 %}
+    <!-- Étape 3: Résultat de l'import -->
+    <div class="card">
+        <div class="card-header {% if resultat.erreurs %}bg-danger{% else %}bg-success{% endif %} text-white">
+            <h5 class="mb-0"><i class="fas fa-chart-line"></i> Étape 3 : Résultat de l'import</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h3>{{ resultat.total }}</h3>
+                            <p>Lignes traitées</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h3>{{ resultat.crees }}</h3>
+                            <p>Réclamations créées</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h3>{{ resultat.produits_importes|default:0 }}</h3>
+                            <p>Lignes produits</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-secondary text-white">
+                        <div class="card-body text-center">
+                            <h3>{{ resultat.erreurs|length }}</h3>
+                            <p>Erreurs</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if resultat.erreurs %}
+            <div class="alert alert-danger">
+                <h6><i class="fas fa-exclamation-circle"></i> Détail des erreurs :</h6>
+                <ul>
+                    {% for erreur in resultat.erreurs %}
+                    <li>{{ erreur }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <div class="text-center">
+                <a href="{% url 'reclamations:liste' %}" class="btn btn-primary">
+                    <i class="fas fa-list"></i> Voir les réclamations
+                </a>
+                <a href="{% url 'reclamations:import_reclamations' %}" class="btn btn-secondary">
+                    <i class="fas fa-file-import"></i> Nouvel import
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.getElementById('downloadTemplate')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    const data = [
+        ['numero_reclamation', 'date_reclamation', 'client', 'site', 'produit', 'quantite', 'description_non_conformite'],
+        ['REC-001', '2024-01-15', 'Client A', 'Site Paris', 'PROD001', '10', 'Défaut esthétique'],
+        ['REC-002', '2024-01-20', 'Client B', 'Site Lyon', 'PROD002,PROD003', '5', 'Problème fonctionnel'],
+        ['REC-003', '2024-01-25', 'Client A', 'Site Paris', 'PROD004\nPROD005', '2', 'Non-conformité']
+    ];
+    const csv = data.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'template_reclamations.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+document.getElementById('uploadForm')?.addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('excel_file');
+    if (!fileInput.files.length) {
+        e.preventDefault();
+        alert('Veuillez sélectionner un fichier');
+    }
+});
+</script>
+{% endblock %}

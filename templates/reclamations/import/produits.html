@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Importer des produits depuis Excel{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-excel"></i> Importer des produits depuis Excel</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="excel_file" class="form-label">Fichier Excel</label>
+                            <input type="file" class="form-control" id="excel_file" name="excel_file" 
+                                   accept=".xlsx,.xls" required>
+                            <div class="form-text">Formats acceptés: .xlsx, .xls</div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> Format du fichier Excel :</h6>
+                            <p>Le fichier doit contenir les colonnes suivantes :</p>
+                            <ul>
+                                <li><strong>product_number</strong> (obligatoire) - Référence du produit</li>
+                                <li><strong>designation</strong> (optionnel) - Désignation du produit</li>
+                                <li><strong>actif</strong> (optionnel) - Statut (Oui/Non, True/False, 1/0)</li>
+                            </ul>
+                            <a href="#" class="btn btn-sm btn-outline-primary" id="downloadTemplate">
+                                <i class="fas fa-download"></i> Télécharger le modèle
+                            </a>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-upload"></i> Importer
+                            </button>
+                            <a href="{% url 'reclamations:liste_produits' %}" class="btn btn-secondary">
+                                Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('downloadTemplate').addEventListener('click', function(e) {
+    e.preventDefault();
+    // Créer un fichier Excel template
+    const data = [
+        ['product_number', 'designation', 'actif'],
+        ['PROD001', 'Produit exemple 1', 'Oui'],
+        ['PROD002', 'Produit exemple 2', 'Non'],
+        ['PROD003', 'Produit exemple 3', 'Oui']
+    ];
+    
+    // Convertir en CSV pour l'export
+    const csv = data.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'template_produits.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+});
+</script>
+{% endblock %}

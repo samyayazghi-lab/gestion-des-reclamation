@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load reclamations_extras %}
+
+{% block title %}Gestion des Sites{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="fas fa-map-marker-alt"></i> Gestion des Sites</h1>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'reclamations:creer_site' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nouveau Site
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Nom</th>
+                            <th>UAP</th>
+                            <th>Nombre de clients</th>
+                            <th>Réclamations</th>
+                            <th>Date de création</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for site in sites %}
+                        <tr>
+                            <td><strong>{{ site.nom }}</strong></td>
+                            <td><span class="badge bg-info">{{ site.uap.nom }}</span></td>
+                            <td><span class="badge bg-secondary">{{ site.clients.count }}</span></td>
+                            <td>
+                                {% with total=site.clients.all|sum_reclamations %}
+                                <span class="badge bg-warning">{{ total|default:0 }}</span>
+                                {% endwith %}
+                            </td>
+                            <td>{{ site.date_creation|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'reclamations:modifier_site' site.id %}" 
+                                       class="btn btn-sm btn-warning" title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'reclamations:supprimer_site' site.id %}" 
+                                       class="btn btn-sm btn-danger" title="Supprimer"
+                                       {% if site.clients.exists %}disabled{% endif %}>
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                                {% if site.clients.exists %}
+                                <small class="text-muted d-block">(utilisé)</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
+                                <p class="lead">Aucun site trouvé</p>
+                                <a href="{% url 'reclamations:creer_site' %}" class="btn btn-primary">
+                                    Créer le premier site
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,425 @@
+{% extends 'base.html' %}
+
+{% block title %}Nouvelle Réclamation{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    .ligne-reclamation {
+        background-color: #f8f9fa;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 5px;
+        border-left: 4px solid #007bff;
+    }
+    .remove-ligne {
+        cursor: pointer;
+        color: #dc3545;
+        font-size: 1.2rem;
+    }
+    .remove-ligne:hover {
+        color: #bd2130;
+    }
+    .is-invalid {
+        border-color: #dc3545;
+    }
+    .invalid-feedback {
+        display: none;
+        color: #dc3545;
+        font-size: 0.875em;
+    }
+    .is-invalid + .invalid-feedback {
+        display: block;
+    }
+    .select2-container--default .select2-selection--single {
+        height: 38px;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 38px;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="fas fa-plus-circle"></i> Nouvelle Réclamation</h1>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'reclamations:liste' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour à la liste
+            </a>
+        </div>
+    </div>
+
+    <form method="post" id="reclamationForm">
+        {% csrf_token %}
+        
+        <!-- Informations générales -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Informations générales</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="numero_reclamation" class="form-label">N° Réclamation *</label>
+                        <input type="text" class="form-control" id="numero_reclamation" name="numero_reclamation" 
+                               value="{{ anciennes_valeurs.numero_reclamation|default:'' }}" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="date_reclamation" class="form-label">Date réclamation</label>
+                        <input type="date" class="form-control" id="date_reclamation" name="date_reclamation" 
+                               value="{{ anciennes_valeurs.date_reclamation|default:today|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="client" class="form-label">Client *</label>
+                        <select class="form-control" id="client" name="client" required>
+                            <option value="">Sélectionnez un client</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}" 
+                                {% if anciennes_valeurs.client == client.id|stringformat:"s" %}selected{% endif %}>
+                                {{ client.nom }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="site_client" class="form-label">Site client concerné</label>
+                        <select class="form-control" id="site_client" name="site_client">
+                            <option value="">Sélectionnez d'abord un client</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="site_usine" class="form-label">Site usine *</label>
+                        <select class="form-control" id="site_usine" name="site_usine" required>
+                            <option value="">Sélectionnez un site usine</option>
+                            {% for site in sites_usine %}
+                            <option value="{{ site.id }}" 
+                                {% if anciennes_valeurs.site_usine == site.id|stringformat:"s" %}selected{% endif %}>
+                                {{ site.nom }} ({{ site.uap.nom }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="programme" class="form-label">Programme</label>
+                        <select class="form-control" id="programme" name="programme">
+                            <option value="">Sélectionnez d'abord un client</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="imputation" class="form-label">Imputation</label>
+                        <select class="form-control" id="imputation" name="imputation">
+                            {% for value, label in imputation_choices %}
+                            <option value="{{ value }}" 
+                                {% if anciennes_valeurs.imputation == value or value == 'CIM' and not anciennes_valeurs.imputation %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="type_nc" class="form-label">Type de NC</label>
+                        <select class="form-control" id="type_nc" name="type_nc">
+                            {% for value, label in type_nc_choices %}
+                            <option value="{{ value }}" 
+                                {% if anciennes_valeurs.type_nc == value or value == 'TECHNIQUE' and not anciennes_valeurs.type_nc %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Lignes de réclamation -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list"></i> Produits concernés</h5>
+                <button type="button" class="btn btn-light btn-sm" id="addLigne">
+                    <i class="fas fa-plus"></i> Ajouter un produit
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="lignes-container">
+                    <!-- Les lignes seront ajoutées ici dynamiquement -->
+                </div>
+                
+                <div class="alert alert-info" id="no-lignes-message">
+                    <i class="fas fa-info-circle"></i> Cliquez sur "Ajouter un produit" pour commencer.
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-end mb-4">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> Créer la réclamation
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+// Variables globales
+let ligneCount = 0;
+
+// Initialisation au chargement du DOM
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM chargé, initialisation...");
+    
+    // Ajouter la première ligne de produit
+    addLigneReclamation();
+    
+    // Event listeners
+    document.getElementById('addLigne').addEventListener('click', function() {
+        addLigneReclamation();
+    });
+    
+    // Gestion du changement de client
+    const clientSelect = document.getElementById('client');
+    if (clientSelect) {
+        clientSelect.addEventListener('change', function() {
+            const clientId = this.value;
+            console.log("Client sélectionné ID:", clientId);
+            
+            const programmeSelect = document.getElementById('programme');
+            const siteClientSelect = document.getElementById('site_client');
+            
+            if (clientId) {
+                if (programmeSelect) {
+                    programmeSelect.innerHTML = '<option value="">Chargement des programmes...</option>';
+                    programmeSelect.disabled = true;
+                }
+                if (siteClientSelect) {
+                    siteClientSelect.innerHTML = '<option value="">Chargement des sites client...</option>';
+                    siteClientSelect.disabled = true;
+                }
+                
+                const programmesUrl = `{% url 'reclamations:programmes_par_client' %}?client_id=${clientId}`;
+                const sitesUrl = `{% url 'reclamations:sites_client_par_client' %}?client_id=${clientId}`;
+                
+                // Charger les programmes
+                fetch(programmesUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (programmeSelect) {
+                            programmeSelect.innerHTML = '<option value="">Sélectionnez un programme</option>';
+                            programmeSelect.disabled = false;
+                            data.forEach(p => {
+                                programmeSelect.innerHTML += `<option value="${p.id}">${p.nom}</option>`;
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur chargement programmes:', error);
+                        if (programmeSelect) {
+                            programmeSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+                            programmeSelect.disabled = false;
+                        }
+                    });
+                
+                // Charger les sites client
+                fetch(sitesUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (siteClientSelect) {
+                            siteClientSelect.innerHTML = '<option value="">Sélectionnez un site client</option>';
+                            siteClientSelect.disabled = false;
+                            data.forEach(s => {
+                                let villeInfo = s.ville ? ` (${s.ville})` : '';
+                                siteClientSelect.innerHTML += `<option value="${s.id}">${s.nom}${villeInfo}</option>`;
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur chargement sites client:', error);
+                        if (siteClientSelect) {
+                            siteClientSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+                            siteClientSelect.disabled = false;
+                        }
+                    });
+            } else {
+                if (programmeSelect) {
+                    programmeSelect.innerHTML = '<option value="">Sélectionnez d\'abord un client</option>';
+                    programmeSelect.disabled = true;
+                }
+                if (siteClientSelect) {
+                    siteClientSelect.innerHTML = '<option value="">Sélectionnez d\'abord un client</option>';
+                    siteClientSelect.disabled = true;
+                }
+            }
+        });
+        
+        if (clientSelect.value) {
+            clientSelect.dispatchEvent(new Event('change'));
+        }
+    }
+    
+    // Validation du formulaire
+    const form = document.getElementById('reclamationForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const lignes = document.querySelectorAll('.ligne-reclamation');
+            if (lignes.length === 0) {
+                e.preventDefault();
+                alert('Vous devez ajouter au moins un produit à la réclamation.');
+                return;
+            }
+            
+            let hasEmptyProduct = false;
+            document.querySelectorAll('select[name="produit[]"]').forEach(select => {
+                if (!select.value) {
+                    select.classList.add('is-invalid');
+                    hasEmptyProduct = true;
+                } else {
+                    select.classList.remove('is-invalid');
+                }
+            });
+            
+            if (hasEmptyProduct) {
+                e.preventDefault();
+                alert('Veuillez sélectionner un produit pour chaque ligne.');
+                return;
+            }
+            
+            let hasInvalidQuantity = false;
+            document.querySelectorAll('input[name="quantite[]"]').forEach(input => {
+                if (!input.value || parseInt(input.value) < 1) {
+                    input.classList.add('is-invalid');
+                    hasInvalidQuantity = true;
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            });
+            
+            if (hasInvalidQuantity) {
+                e.preventDefault();
+                alert('Veuillez saisir une quantité valide (minimum 1).');
+                return;
+            }
+        });
+    }
+});
+
+function addLigneReclamation(data = {}) {
+    const container = document.getElementById('lignes-container');
+    if (!container) return;
+    
+    const ligneId = ligneCount;
+    
+    const template = `
+        <div class="ligne-reclamation" id="ligne-${ligneId}">
+            <div class="row">
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Produit *</label>
+                    <select class="form-control select2-produit-${ligneId}" name="produit[]" style="width: 100%;" required>
+                        <option value="">Rechercher un produit...</option>
+                    </select>
+                    <div class="invalid-feedback">Veuillez sélectionner un produit</div>
+                </div>
+                <div class="col-md-2 mb-2">
+                    <label class="form-label">Quantité *</label>
+                    <input type="number" class="form-control" name="quantite[]" min="1" value="${data.quantite || ''}" required>
+                    <div class="invalid-feedback">Quantité invalide</div>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Description non-conformité</label>
+                    <textarea class="form-control" name="description[]" rows="2">${data.description || ''}</textarea>
+                </div>
+                <div class="col-md-1 mb-2 text-end">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <i class="fas fa-trash-alt remove-ligne" onclick="removeLigne(${ligneId})"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <textarea class="form-control" name="commentaire[]" placeholder="Commentaire...">${data.commentaire || ''}</textarea>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', template);
+    
+    // Initialiser Select2 avec AJAX
+    $(`.select2-produit-${ligneId}`).select2({
+        ajax: {
+            url: "{% url 'reclamations:recherche_produits' %}",
+            dataType: 'json',
+            delay: 300,
+            data: function(params) {
+                return {
+                    term: params.term || '',
+                    page: params.page || 1
+                };
+            },
+            processResults: function(data, params) {
+                params.page = params.page || 1;
+                return {
+                    results: data.results,
+                    pagination: {
+                        more: data.pagination.more
+                    }
+                };
+            },
+            cache: true
+        },
+        placeholder: 'Tapez au moins 2 caractères pour rechercher...',
+        minimumInputLength: 2,
+        allowClear: true,
+        width: '100%',
+        language: {
+            inputTooShort: function(args) {
+                return "Saisissez " + (args.minimum - args.input.length) + " caractère(s)";
+            },
+            noResults: function() {
+                return "Aucun produit trouvé";
+            },
+            searching: function() {
+                return "Recherche en cours...";
+            }
+        }
+    });
+    
+    const noLignesMessage = document.getElementById('no-lignes-message');
+    if (noLignesMessage) {
+        noLignesMessage.style.display = 'none';
+    }
+    
+    ligneCount++;
+}
+
+function removeLigne(id) {
+    const ligne = document.getElementById(`ligne-${id}`);
+    if (ligne) {
+        $(ligne).find('.select2-produit-' + id).select2('destroy');
+        ligne.remove();
+    }
+    
+    const noLignesMessage = document.getElementById('no-lignes-message');
+    if (noLignesMessage && document.querySelectorAll('.ligne-reclamation').length === 0) {
+        noLignesMessage.style.display = 'block';
+    }
+}
+</script>
+{% endblock %}

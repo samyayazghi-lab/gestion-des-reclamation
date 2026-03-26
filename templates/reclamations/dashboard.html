@@ -1,0 +1,947 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tableau de bord - Gestion des Réclamations{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        transition: transform 0.3s, box-shadow 0.3s;
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    .stat-icon {
+        font-size: 2.5rem;
+        opacity: 0.2;
+        position: absolute;
+        right: 20px;
+        bottom: 20px;
+    }
+    .stat-value {
+        font-size: 2.2rem;
+        font-weight: bold;
+        margin-bottom: 0;
+    }
+    .stat-label {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        opacity: 0.8;
+    }
+    .chart-container {
+        position: relative;
+        height: 320px;
+        width: 100%;
+    }
+    .card-header {
+        font-weight: 600;
+        border-bottom: none;
+        padding: 1rem 1.25rem;
+    }
+    .card-header i {
+        margin-right: 8px;
+    }
+    .objectif-tooltip {
+        cursor: help;
+        border-bottom: 1px dashed #999;
+    }
+    .nqc-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .ppm-card {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    .reclamation-card {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    .cloture-card {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+    .badge-stat {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+    }
+    .list-group-item {
+        border-left: none;
+        border-right: none;
+        padding: 0.75rem 1rem;
+    }
+    .list-group-item:first-child {
+        border-top: none;
+    }
+    .objectifs-mini {
+        background-color: #f8f9fa;
+        border-radius: 12px;
+        padding: 1rem;
+    }
+    .objectif-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    .objectif-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    .objectif-value {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1"><i class="fas fa-chart-line me-2 text-primary"></i>Tableau de bord</h1>
+            <p class="text-muted mb-0">Synthèse des indicateurs qualité et performances</p>
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-download me-1"></i> Exporter
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'reclamations:export_dashboard_pdf' %}">
+                    <i class="fas fa-file-pdf me-2 text-danger"></i> Dashboard PDF
+                </a></li>
+                <li><a class="dropdown-item" href="{% url 'reclamations:export_dashboard_excel' %}">
+                    <i class="fas fa-file-excel me-2 text-success"></i> Dashboard Excel
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'reclamations:export_reclamations_excel' %}">
+                    <i class="fas fa-file-excel me-2 text-success"></i> Toutes les réclamations (Excel)
+                </a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Cartes KPI principales -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card reclamation-card text-white">
+                <div class="card-body position-relative">
+                    <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+                    <div class="stat-label">Total réclamations</div>
+                    <div class="stat-value">{{ total_reclamations|default:0 }}</div>
+                    <small>toutes périodes confondues</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card bg-warning text-white">
+                <div class="card-body position-relative">
+                    <div class="stat-icon"><i class="fas fa-folder-open"></i></div>
+                    <div class="stat-label">En cours</div>
+                    <div class="stat-value">{{ reclamations_ouvertes|default:0 }}</div>
+                    <small>réclamations non clôturées</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card cloture-card text-white">
+                <div class="card-body position-relative">
+                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-label">Clôturées</div>
+                    <div class="stat-value">{{ reclamations_cloturees|default:0 }}</div>
+                    <small>taux: {{ taux_cloture|default:0 }}%</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card bg-secondary text-white">
+                <div class="card-body position-relative">
+                    <div class="stat-icon"><i class="fas fa-rocket"></i></div>
+                    <div class="stat-label">Réactivité</div>
+                    <div class="stat-value">{{ taux_reactivite|default:0 }}%</div>
+                    <small>clôturées &lt; 30 jours</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs supplémentaires -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card bg-info text-white">
+                <div class="card-body position-relative">
+                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="stat-label">Délai moyen</div>
+                    <div class="stat-value">{{ duree_moyenne|default:0 }} <small style="font-size: 1rem;">jours</small></div>
+                    <small>de clôture</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card ppm-card text-white">
+                <div class="card-body position-relative">
+                    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="stat-label">PPM Global</div>
+                    <div class="stat-value">{{ ppm_global|floatformat:0|default:0 }}</div>
+                    <small>parts par million</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card nqc-card text-white">
+                <div class="card-body position-relative">
+                    <div class="stat-icon"><i class="fas fa-euro-sign"></i></div>
+                    <div class="stat-label">Coût NQC Total</div>
+                    <div class="stat-value">{{ nqc_total|floatformat:2|default:0 }} €</div>
+                    <small>{{ nqc_total_reclamations|default:0 }} réclamations</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card bg-dark text-white">
+                <div class="card-body position-relative">
+                    <div class="stat-icon"><i class="fas fa-calculator"></i></div>
+                    <div class="stat-label">Coût moyen / réclamation</div>
+                    <div class="stat-value">{{ nqc_cout_moyen|floatformat:2|default:0 }} €</div>
+                    <small>par réclamation</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Objectifs (version compacte) -->
+    {% if objectifs_par_site %}
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-header bg-light border-0">
+            <i class="fas fa-bullseye text-primary me-2"></i> Objectifs {{ annee_courante|default:"" }}
+            <span class="badge bg-secondary ms-2 objectif-tooltip" title="Objectifs par site pour l'année en cours">
+                <i class="fas fa-info-circle"></i> par site
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for obj in objectifs_par_site|slice:":4" %}
+                <div class="col-md-3 mb-2">
+                    <div class="objectifs-mini">
+                        <div class="objectif-item">
+                            <span class="objectif-label">Site {{ obj.site.nom }}</span>
+                        </div>
+                        <div class="objectif-item">
+                            <span class="objectif-label">Rebut</span>
+                            <span class="objectif-value">{{ obj.objectif_rebut|floatformat:1 }}%</span>
+                        </div>
+                        <div class="objectif-item">
+                            <span class="objectif-label">PPM</span>
+                            <span class="objectif-value">{{ obj.objectif_ppm_externe|floatformat:0 }}</span>
+                        </div>
+                        <div class="objectif-item">
+                            <span class="objectif-label">Rework</span>
+                            <span class="objectif-value">{{ obj.objectif_rework|floatformat:1 }}%</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% if objectifs_par_site|length > 4 %}
+            <div class="text-center mt-2">
+                <button class="btn btn-link btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#moreObjectives">
+                    <i class="fas fa-chevron-down"></i> Voir tous les sites ({{ objectifs_par_site|length }})
+                </button>
+                <div class="collapse mt-3" id="moreObjectives">
+                    <div class="row">
+                        {% for obj in objectifs_par_site|slice:"4:" %}
+                        <div class="col-md-3 mb-2">
+                            <div class="objectifs-mini">
+                                <div class="objectif-item">
+                                    <span class="objectif-label">Site {{ obj.site.nom }}</span>
+                                </div>
+                                <div class="objectif-item">
+                                    <span class="objectif-label">Rebut</span>
+                                    <span class="objectif-value">{{ obj.objectif_rebut|floatformat:1 }}%</span>
+                                </div>
+                                <div class="objectif-item">
+                                    <span class="objectif-label">PPM</span>
+                                    <span class="objectif-value">{{ obj.objectif_ppm_externe|floatformat:0 }}</span>
+                                </div>
+                                <div class="objectif-item">
+                                    <span class="objectif-label">Rework</span>
+                                    <span class="objectif-value">{{ obj.objectif_rework|floatformat:1 }}%</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Graphiques principaux -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <i class="fas fa-chart-bar text-primary me-2"></i> Top 10 clients
+                </div>
+                <div class="card-body">
+                    {% if clients_labels and clients_data %}
+                    <div class="chart-container">
+                        <canvas id="chartClients"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">Aucune donnée disponible</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <i class="fas fa-chart-line text-success me-2"></i> Évolution mensuelle
+                </div>
+                <div class="card-body">
+                    {% if mois_labels and mois_data %}
+                    <div class="chart-container">
+                        <canvas id="chartMois"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">Aucune donnée disponible</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphiques NQC -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <i class="fas fa-chart-bar text-info me-2"></i> NQC - Coût mensuel (€)
+                </div>
+                <div class="card-body">
+                    {% if nqc_mois_labels and nqc_mois_cout %}
+                    <div class="chart-container">
+                        <canvas id="chartNQCCout"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">Aucune donnée disponible</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <i class="fas fa-chart-line text-warning me-2"></i> NQC - Nombre de réclamations
+                </div>
+                <div class="card-body">
+                    {% if nqc_mois_labels and nqc_mois_nombre %}
+                    <div class="chart-container">
+                        <canvas id="chartNQCNombre"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">Aucune donnée disponible</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NQC par client et par type -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <i class="fas fa-chart-bar text-primary me-2"></i> Top 10 clients - Coût NQC
+                </div>
+                <div class="card-body">
+                    {% if nqc_par_client %}
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="chartNQCClient"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">Aucune donnée disponible</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <i class="fas fa-pie-chart text-danger me-2"></i> Répartition NQC par type
+                </div>
+                <div class="card-body">
+                    {% if nqc_par_type %}
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="chartNQCType"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">Aucune donnée disponible</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PPM Evolution -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-12">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <i class="fas fa-chart-line text-danger me-2"></i> PPM - Évolution mensuelle
+                </div>
+                <div class="card-body">
+                    {% if ppm_evolution %}
+                    <div class="chart-container">
+                        <canvas id="chartPPMEvolution"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">Aucune donnée disponible</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Répartition et typologie -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <i class="fas fa-pie-chart text-warning me-2"></i> Répartition par UAP
+                </div>
+                <div class="card-body">
+                    {% if uap_labels and uap_data %}
+                    <div class="chart-container" style="height: 280px;">
+                        <canvas id="chartUAP"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">Aucune donnée disponible</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <i class="fas fa-tags text-secondary me-2"></i> Répartition par imputation
+                </div>
+                <div class="card-body">
+                    {% if imputation_labels and imputation_data %}
+                    <div class="chart-container" style="height: 280px;">
+                        <canvas id="chartImputation"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">Aucune donnée disponible</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <i class="fas fa-tag text-purple me-2"></i> Répartition par type de NC
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for type in type_nc_stats %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ type.label }}
+                            <span class="badge bg-primary rounded-pill">{{ type.total }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted">Aucune donnée disponible</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Typologie des réclamations par mois -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <i class="fas fa-chart-line text-danger me-2"></i> Typologie des réclamations par mois
+                </div>
+                <div class="card-body">
+                    {% if typologie_par_mois and mois_labels %}
+                    <div class="chart-container" style="height: 380px;">
+                        <canvas id="chartTypologie"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">Aucune donnée disponible</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top produits -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <i class="fas fa-box text-orange me-2"></i> Top 5 produits les plus réclamés
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                 <tr>
+                                    <th>Référence</th>
+                                    <th>Désignation</th>
+                                    <th class="text-end">Nb réclamations</th>
+                                 </tr>
+                            </thead>
+                            <tbody>
+                                {% for produit in top_produits %}
+                                <tr>
+                                    <td><code>{{ produit.product_number }}</code></td>
+                                    <td>{{ produit.designation|default:"-" }}</td>
+                                    <td class="text-end"><span class="badge bg-danger">{{ produit.nb_reclamations }}</span></td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">Aucun produit réclamé</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Taux de récurrence des produits -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <i class="fas fa-chart-line text-danger me-2"></i> Top produits récurrents
+                    <span class="badge bg-secondary ms-2">taux de récurrence</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Produit</th>
+                                    <th>Désignation</th>
+                                    <th class="text-end">Nb réclamations</th>
+                                    <th class="text-end">Quantité totale</th>
+                                    <th class="text-end">Taux de récurrence</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for produit in top_produits_recurrents %}
+                                <tr>
+                                    <td><code>{{ produit.product_number }}</code></td>
+                                    <td>{{ produit.designation|default:"-"|truncatechars:40 }}</td>
+                                    <td class="text-end">
+                                        <span class="badge bg-danger">{{ produit.nb_reclamations }}</span>
+                                    </td>
+                                    <td class="text-end">{{ produit.quantite_totale|floatformat:0 }}</td>
+                                    <td class="text-end">
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-warning" 
+                                                role="progressbar" 
+                                                style="width: {{ produit.taux_recurrence }}%;"
+                                                aria-valuenow="{{ produit.taux_recurrence }}" 
+                                                aria-valuemin="0" 
+                                                aria-valuemax="100">
+                                                {{ produit.taux_recurrence }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if produit.id %}
+                                        <a href="{% url 'reclamations:detail_recurrence_produit' produit.id %}" 
+                                           class="btn btn-sm btn-info">
+                                            <i class="fas fa-chart-line"></i> Détail
+                                        </a>
+                                        {% else %}
+                                        <span class="text-muted">ID manquant</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">Aucune donnée disponible</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphique d'évolution des produits les plus récurrents -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <i class="fas fa-chart-line text-info me-2"></i> Évolution des produits les plus récurrents
+                </div>
+                <div class="card-body">
+                    {% if recurrence_evolution and recurrence_evolution|length > 0 %}
+                    <div class="chart-container" style="height: 350px;">
+                        <canvas id="chartRecurrenceProduits"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Aucune donnée d'évolution disponible. Commencez par créer des réclamations.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    Chart.defaults.font.size = 12;
+    Chart.defaults.color = '#666';
+    
+    // 1. Histogramme des clients
+    {% if clients_labels and clients_data %}
+    new Chart(document.getElementById('chartClients'), {
+        type: 'bar',
+        data: {
+            labels: {{ clients_labels|safe }},
+            datasets: [{
+                label: 'Nombre de réclamations',
+                data: {{ clients_data|safe }},
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+    {% endif %}
+    
+    // 2. Évolution mensuelle
+    {% if mois_labels and mois_data %}
+    new Chart(document.getElementById('chartMois'), {
+        type: 'line',
+        data: {
+            labels: {{ mois_labels|safe }},
+            datasets: [{
+                label: 'Réclamations',
+                data: {{ mois_data|safe }},
+                fill: true,
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                tension: 0.4,
+                pointRadius: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+    });
+    {% endif %}
+    
+    // 3. Graphique NQC - Coût mensuel
+    {% if nqc_mois_labels and nqc_mois_cout %}
+    new Chart(document.getElementById('chartNQCCout'), {
+        type: 'bar',
+        data: {
+            labels: {{ nqc_mois_labels|safe }},
+            datasets: [{
+                label: 'Coût NQC (€)',
+                data: {{ nqc_mois_cout|safe }},
+                backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                borderColor: 'rgba(102, 126, 234, 1)',
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Coût (€)' },
+                    ticks: { callback: function(value) { return value.toLocaleString('fr-FR') + ' €'; } }
+                }
+            },
+            plugins: {
+                tooltip: { 
+                    callbacks: { 
+                        label: function(context) { 
+                            return context.raw.toLocaleString('fr-FR') + ' €'; 
+                        } 
+                    } 
+                }
+            }
+        }
+    });
+    {% endif %}
+    
+    // 4. Graphique NQC - Nombre de réclamations
+    {% if nqc_mois_labels and nqc_mois_nombre %}
+    new Chart(document.getElementById('chartNQCNombre'), {
+        type: 'line',
+        data: {
+            labels: {{ nqc_mois_labels|safe }},
+            datasets: [{
+                label: 'Nombre de réclamations',
+                data: {{ nqc_mois_nombre|safe }},
+                fill: true,
+                backgroundColor: 'rgba(255, 193, 7, 0.2)',
+                borderColor: 'rgba(255, 193, 7, 1)',
+                tension: 0.4,
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { 
+                y: { 
+                    beginAtZero: true, 
+                    ticks: { stepSize: 1 },
+                    title: { display: true, text: 'Nombre de réclamations' }
+                } 
+            }
+        }
+    });
+    {% endif %}
+    
+    // 5. Graphique NQC par client
+    {% if nqc_par_client %}
+    const nqcClientData = {{ nqc_par_client|safe }};
+    new Chart(document.getElementById('chartNQCClient'), {
+        type: 'bar',
+        data: {
+            labels: nqcClientData.map(item => item.client__nom),
+            datasets: [{
+                label: 'Coût NQC (€)',
+                data: nqcClientData.map(item => item.cout_total),
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { 
+                y: { 
+                    beginAtZero: true, 
+                    ticks: { callback: function(v) { return v.toLocaleString('fr-FR') + ' €'; } },
+                    title: { display: true, text: 'Coût (€)' }
+                } 
+            }
+        }
+    });
+    {% endif %}
+    
+    // 6. Graphique NQC par type
+    {% if nqc_par_type %}
+    const nqcTypeData = {{ nqc_par_type|safe }};
+    new Chart(document.getElementById('chartNQCType'), {
+        type: 'pie',
+        data: {
+            labels: nqcTypeData.map(item => item.label),
+            datasets: [{
+                data: nqcTypeData.map(item => item.cout),
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = nqcTypeData.reduce((sum, item) => sum + item.cout, 0);
+                            const percentage = ((context.raw / total) * 100).toFixed(1);
+                            return `${context.label}: ${context.raw.toLocaleString('fr-FR')} € (${percentage}%)`;
+                        }
+                    }
+                },
+                legend: {
+                    position: 'right'
+                }
+            }
+        }
+    });
+    {% endif %}
+    
+    // 7. PPM Evolution
+    {% if ppm_evolution %}
+    const ppmData = {{ ppm_evolution|safe }};
+    new Chart(document.getElementById('chartPPMEvolution'), {
+        type: 'line',
+        data: {
+            labels: ppmData.map(i => i.mois_nom),
+            datasets: [{
+                label: 'PPM',
+                data: ppmData.map(i => i.ppm),
+                fill: true,
+                backgroundColor: 'rgba(245, 87, 108, 0.2)',
+                borderColor: 'rgba(245, 87, 108, 1)',
+                tension: 0.4,
+                pointRadius: 4
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            scales: { 
+                y: { 
+                    beginAtZero: true,
+                    title: { display: true, text: 'PPM' }
+                } 
+            } 
+        }
+    });
+    {% endif %}
+    
+    // 8. Répartition UAP
+    {% if uap_labels and uap_data %}
+    new Chart(document.getElementById('chartUAP'), {
+        type: 'pie',
+        data: {
+            labels: {{ uap_labels|safe }},
+            datasets: [{ 
+                data: {{ uap_data|safe }}, 
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'] 
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+    });
+    {% endif %}
+    
+    // 9. Répartition imputation
+    {% if imputation_labels and imputation_data %}
+    new Chart(document.getElementById('chartImputation'), {
+        type: 'doughnut',
+        data: {
+            labels: {{ imputation_labels|safe }},
+            datasets: [{ 
+                data: {{ imputation_data|safe }}, 
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'] 
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+    {% endif %}
+    
+    // 10. Typologie par mois
+    {% if typologie_par_mois and mois_labels %}
+    const typologieData = {{ typologie_par_mois|safe }};
+    const colorsTypo = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
+    new Chart(document.getElementById('chartTypologie'), {
+        type: 'line',
+        data: {
+            labels: {{ mois_labels|safe }},
+            datasets: typologieData.map((item, i) => ({
+                label: item.label,
+                data: item.data,
+                borderColor: colorsTypo[i % colorsTypo.length],
+                tension: 0.4,
+                fill: false,
+                pointRadius: 3
+            }))
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+    });
+    {% endif %}
+    
+    // 11. Graphique d'évolution des produits récurrents
+    {% if recurrence_evolution and recurrence_evolution|length > 0 %}
+    try {
+        const recurrenceData = {{ recurrence_evolution|safe }};
+        const productColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#FFA07A', '#20B2AA', '#87CEEB', '#DDA0DD'];
+        
+        if (recurrenceData && Object.keys(recurrenceData).length > 0) {
+            const firstProduct = Object.keys(recurrenceData)[0];
+            const labels = recurrenceData[firstProduct]?.map(p => p.mois_nom || p.periode) || [];
+            
+            const datasets = Object.keys(recurrenceData).map((produit, idx) => ({
+                label: produit,
+                data: recurrenceData[produit].map(p => p.taux_recurrence || 0),
+                borderColor: productColors[idx % productColors.length],
+                backgroundColor: 'transparent',
+                fill: false,
+                tension: 0.4,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                borderWidth: 2
+            }));
+            
+            const ctx = document.getElementById('chartRecurrenceProduits');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.raw}%`;
+                                    }
+                                }
+                            },
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    boxWidth: 12,
+                                    font: { size: 11 }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Taux de récurrence (%)', font: { weight: 'bold' } },
+                                ticks: { callback: function(v) { return v + '%'; } }
+                            },
+                            x: {
+                                title: { display: true, text: 'Période', font: { weight: 'bold' } }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    } catch(e) {
+        console.error('Erreur création graphique récurrence:', e);
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}

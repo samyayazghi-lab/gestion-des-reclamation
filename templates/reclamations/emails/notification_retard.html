@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Notification de retard - Réclamation {{ reclamation.numero_reclamation }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #dc3545;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px;
+        }
+        .content {
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .deadline {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6c757d;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ Notification de retard</h1>
+            <p>Réclamation {{ reclamation.numero_reclamation }}</p>
+        </div>
+        
+        <div class="content">
+            <h2>Bonjour,</h2>
+            
+            <p>La réclamation <strong>{{ reclamation.numero_reclamation }}</strong> dépasse les délais de clôture prévus.</p>
+            
+            <div class="warning">
+                <strong>📋 Informations :</strong><br>
+                Client : {{ reclamation.client.nom }}<br>
+                Date de création : {{ reclamation.date_reclamation|date:"d/m/Y" }}<br>
+                Type : {{ reclamation.get_type_nc_display }}
+            </div>
+            
+            <h3>📅 États en retard :</h3>
+            <ul>
+                {% for notif in notifications %}
+                <li>
+                    <strong>État {{ notif.type }} :</strong>
+                    À clôturer avant le <span class="deadline">{{ notif.date_limite|date:"d/m/Y" }}</span>
+                    (délai : {{ notif.delai }} jours ouvrés)
+                </li>
+                {% endfor %}
+            </ul>
+            
+            <div class="warning">
+                <strong>⚠️ Action requise :</strong><br>
+                Veuillez mettre à jour les états de cette réclamation dans les meilleurs délais.
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="{{ site_url }}{% url 'reclamations:modifier_etats' reclamation.id %}" class="button">
+                    🔧 Modifier les états
+                </a>
+                &nbsp;&nbsp;
+                <a href="{{ site_url }}{% url 'reclamations:detail_reclamation' reclamation.id %}" class="button" style="background-color: #6c757d;">
+                    👁️ Voir le détail
+                </a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Cet email est généré automatiquement. Merci de ne pas y répondre.</p>
+            <p>© {% now "Y" %} - Gestion des Réclamations</p>
+        </div>
+    </div>
+</body>
+</html>

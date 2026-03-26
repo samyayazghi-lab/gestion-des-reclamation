@@ -1,0 +1,350 @@
+{% extends 'base.html' %}
+{% block title %}Modifier Client - {{ client.nom }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .site-client-ligne {
+        background-color: #f8f9fa;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #ffc107;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .site-client-ligne:hover {
+        background-color: #f0f0f0;
+    }
+    .remove-site {
+        cursor: pointer;
+        color: #dc3545;
+        font-size: 1.3rem;
+        transition: all 0.2s;
+    }
+    .remove-site:hover {
+        color: #bd2130;
+        transform: scale(1.1);
+    }
+    .btn-add-site {
+        border: 2px dashed #28a745;
+        background-color: white;
+        color: #28a745;
+        padding: 10px;
+        width: 100%;
+        font-weight: bold;
+        transition: all 0.3s;
+    }
+    .btn-add-site:hover {
+        background-color: #28a745;
+        color: white;
+        border: 2px dashed white;
+    }
+    .is-invalid {
+        border-color: #dc3545;
+    }
+    .is-invalid:focus {
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-edit"></i> Modifier Client: {{ client.nom }}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="clientForm">
+                        {% csrf_token %}
+                        
+                        <!-- Informations du client -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0">Informations générales</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="nom" class="form-label">Nom du client *</label>
+                                        <input type="text" class="form-control" id="nom" name="nom" value="{{ client.nom }}" required autofocus>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="email" name="email" value="{{ client.email|default:'' }}">
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label for="telephone" class="form-label">Téléphone</label>
+                                        <input type="text" class="form-control" id="telephone" name="telephone" value="{{ client.telephone|default:'' }}">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="actif" name="actif" {% if client.actif %}checked{% endif %}>
+                                        <label class="form-check-label" for="actif">
+                                            Client actif
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sites client (multiples) -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0"><i class="fas fa-store-alt"></i> Sites du client</h6>
+                                <button type="button" class="btn btn-light btn-sm" id="addSiteClient">
+                                    <i class="fas fa-plus"></i> Ajouter un site
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="sites-client-container">
+                                    <!-- Sites existants -->
+                                    {% for site in sites_client %}
+                                    <div class="site-client-ligne" id="site-{{ site.id }}">
+                                        <input type="hidden" name="site_client_id[]" value="{{ site.id }}">
+                                        
+                                        <div class="row mb-2">
+                                            <div class="col-md-8">
+                                                <label class="form-label">Nom du site *</label>
+                                                <input type="text" class="form-control" name="site_client_nom[]" value="{{ site.nom }}" required>
+                                            </div>
+                                            <div class="col-md-4 text-end">
+                                                <label class="form-label">&nbsp;</label>
+                                                <div>
+                                                    <i class="fas fa-trash-alt remove-site" onclick="removeSite(this)"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row mb-2">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Adresse</label>
+                                                <input type="text" class="form-control" name="site_client_adresse[]" value="{{ site.adresse|default:'' }}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">Ville</label>
+                                                <input type="text" class="form-control" name="site_client_ville[]" value="{{ site.ville|default:'' }}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">Code postal</label>
+                                                <input type="text" class="form-control" name="site_client_cp[]" value="{{ site.code_postal|default:'' }}">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row mb-2">
+                                            <div class="col-md-4">
+                                                <label class="form-label">Pays</label>
+                                                <input type="text" class="form-control" name="site_client_pays[]" value="{{ site.pays|default:'France' }}">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Contact principal</label>
+                                                <input type="text" class="form-control" name="site_client_contact[]" value="{{ site.contact_principal|default:'' }}">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Téléphone</label>
+                                                <input type="text" class="form-control" name="site_client_telephone[]" value="{{ site.telephone|default:'' }}">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Email</label>
+                                                <input type="email" class="form-control" name="site_client_email[]" value="{{ site.email|default:'' }}">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-check mt-4">
+                                                    <input class="form-check-input" type="checkbox" 
+                                                           name="site_client_actif_{{ site.id }}" 
+                                                           id="actif_{{ site.id }}" 
+                                                           {% if site.actif %}checked{% endif %}>
+                                                    <label class="form-check-label" for="actif_{{ site.id }}">
+                                                        Site actif
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <div id="no-sites-message" class="alert alert-info" 
+                                     {% if sites_client %}style="display: none;"{% endif %}>
+                                    <i class="fas fa-info-circle"></i> 
+                                    Cliquez sur "Ajouter un site" pour ajouter les établissements du client.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-save"></i> Enregistrer les modifications
+                            </button>
+                            <a href="{% url 'reclamations:liste_clients' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times"></i> Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Compteur pour les nouveaux sites
+let siteCounter = {{ sites_client|length|default:0 }};
+
+// Initialisation au chargement du DOM
+document.addEventListener('DOMContentLoaded', function() {
+    // Bouton ajouter site
+    const addButton = document.getElementById('addSiteClient');
+    if (addButton) {
+        addButton.addEventListener('click', function() {
+            addSiteClientLine();
+        });
+    }
+    
+    // Validation du formulaire
+    const form = document.getElementById('clientForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const siteNoms = document.querySelectorAll('input[name="site_client_nom[]"]');
+            let hasEmptyName = false;
+            
+            siteNoms.forEach(input => {
+                if (!input.value.trim()) {
+                    hasEmptyName = true;
+                    input.classList.add('is-invalid');
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            });
+            
+            if (hasEmptyName) {
+                e.preventDefault();
+                alert('Veuillez remplir tous les noms des sites clients ou supprimer les lignes vides.');
+            }
+        });
+    }
+});
+
+/**
+ * Ajoute une nouvelle ligne pour un site client
+ */
+function addSiteClientLine(data = {}) {
+    const container = document.getElementById('sites-client-container');
+    if (!container) return;
+    
+    const newId = 'new_' + (siteCounter++);
+    
+    const template = `
+        <div class="site-client-ligne" id="site-${newId}">
+            <input type="hidden" name="site_client_id[]" value="${newId}">
+            
+            <div class="row mb-2">
+                <div class="col-md-8">
+                    <label class="form-label">Nom du site *</label>
+                    <input type="text" class="form-control" name="site_client_nom[]" value="${escapeHtml(data.nom || '')}" required>
+                </div>
+                <div class="col-md-4 text-end">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <i class="fas fa-trash-alt remove-site" onclick="removeSite(this)"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-2">
+                <div class="col-md-6">
+                    <label class="form-label">Adresse</label>
+                    <input type="text" class="form-control" name="site_client_adresse[]" value="${escapeHtml(data.adresse || '')}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Ville</label>
+                    <input type="text" class="form-control" name="site_client_ville[]" value="${escapeHtml(data.ville || '')}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Code postal</label>
+                    <input type="text" class="form-control" name="site_client_cp[]" value="${escapeHtml(data.code_postal || '')}">
+                </div>
+            </div>
+            
+            <div class="row mb-2">
+                <div class="col-md-4">
+                    <label class="form-label">Pays</label>
+                    <input type="text" class="form-control" name="site_client_pays[]" value="${escapeHtml(data.pays || 'France')}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Contact principal</label>
+                    <input type="text" class="form-control" name="site_client_contact[]" value="${escapeHtml(data.contact_principal || '')}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Téléphone</label>
+                    <input type="text" class="form-control" name="site_client_telephone[]" value="${escapeHtml(data.telephone || '')}">
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" name="site_client_email[]" value="${escapeHtml(data.email || '')}">
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" 
+                               name="site_client_actif_${newId}" 
+                               id="actif_${newId}" 
+                               checked>
+                        <label class="form-check-label" for="actif_${newId}">
+                            Site actif
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', template);
+    
+    // Masquer le message "aucun site"
+    const noSitesMessage = document.getElementById('no-sites-message');
+    if (noSitesMessage) {
+        noSitesMessage.style.display = 'none';
+    }
+}
+
+/**
+ * Supprime une ligne de site client
+ */
+function removeSite(element) {
+    const ligne = element.closest('.site-client-ligne');
+    if (ligne) {
+        ligne.remove();
+    }
+    
+    // Afficher le message si plus de sites
+    const remainingSites = document.querySelectorAll('.site-client-ligne').length;
+    const noSitesMessage = document.getElementById('no-sites-message');
+    if (noSitesMessage && remainingSites === 0) {
+        noSitesMessage.style.display = 'block';
+    }
+}
+
+/**
+ * Échappe les caractères HTML pour éviter les injections
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}

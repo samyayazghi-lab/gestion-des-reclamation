@@ -1,0 +1,390 @@
+{% extends 'base.html' %}
+{% block title %}Gestion des Clients{% endblock %}
+
+{% block extra_css %}
+<style>
+    .client-card {
+        transition: transform 0.2s;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .client-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .site-badge {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .site-badge:hover {
+        background-color: #0dcaf0 !important;
+        color: white !important;
+    }
+    .modal-site-item {
+        border-left: 3px solid #0dcaf0;
+        margin-bottom: 10px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+    }
+    .modal-site-item:hover {
+        background-color: #e9ecef;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="fas fa-users"></i> Gestion des Clients</h1>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'reclamations:creer_client' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nouveau Client
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Total clients</h5>
+                    <p class="display-6">{{ clients|length }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Clients actifs</h5>
+                    <p class="display-6">{{ clients_actifs|default:clients|length }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Total sites client</h5>
+                    <p class="display-6">{{ total_sites_client|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="fas fa-filter"></i> Filtres</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Rechercher un client...">
+                </div>
+                <div class="col-md-4">
+                    <select class="form-control" id="statutFilter">
+                        <option value="">Tous les statuts</option>
+                        <option value="actif">Actifs</option>
+                        <option value="inactif">Inactifs</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-secondary w-100" onclick="resetFilters()">
+                        <i class="fas fa-undo"></i> Réinitialiser
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des clients -->
+    <div class="row" id="clientsContainer">
+        {% for client in clients %}
+        <div class="col-xl-4 col-md-6 mb-4 client-card-wrapper" 
+             data-client-id="{{ client.id }}"
+             data-client-nom="{{ client.nom|lower }}"
+             data-statut="{% if client.actif %}actif{% else %}inactif{% endif %}">
+            
+            <div class="card client-card h-100">
+                <div class="card-header {% if client.actif %}bg-primary{% else %}bg-secondary{% endif %} text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-building me-2"></i>
+                        {{ client.nom }}
+                    </h5>
+                    <span class="badge {% if client.actif %}bg-success{% else %}bg-danger{% endif %}">
+                        {% if client.actif %}Actif{% else %}Inactif{% endif %}
+                    </span>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Informations de contact -->
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-info-circle"></i> Informations de contact
+                        </h6>
+                        {% if client.email %}
+                        <p class="mb-1">
+                            <i class="fas fa-envelope me-2 text-primary"></i>
+                            <a href="mailto:{{ client.email }}">{{ client.email }}</a>
+                        </p>
+                        {% else %}
+                        <p class="mb-1 text-muted">
+                            <i class="fas fa-envelope me-2"></i>
+                            Email non renseigné
+                        </p>
+                        {% endif %}
+                        
+                        {% if client.telephone %}
+                        <p class="mb-1">
+                            <i class="fas fa-phone me-2 text-primary"></i>
+                            <a href="tel:{{ client.telephone }}">{{ client.telephone }}</a>
+                        </p>
+                        {% else %}
+                        <p class="mb-1 text-muted">
+                            <i class="fas fa-phone me-2"></i>
+                            Téléphone non renseigné
+                        </p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Programmes -->
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-project-diagram"></i> Programmes
+                            <span class="badge bg-info rounded-pill ms-2">
+                                {{ client.programmes.count }}
+                            </span>
+                        </h6>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for programme in client.programmes.all|slice:":3" %}
+                            <span class="badge bg-light text-dark border">
+                                <i class="fas fa-code-branch text-primary me-1"></i>
+                                {{ programme.nom|truncatechars:15 }}
+                            </span>
+                            {% empty %}
+                            <span class="text-muted small">Aucun programme</span>
+                            {% endfor %}
+                            {% if client.programmes.count > 3 %}
+                            <span class="badge bg-secondary">+{{ client.programmes.count|add:"-3" }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Sites client -->
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-store-alt"></i> Sites client
+                            <span class="badge bg-info rounded-pill ms-2 site-badge" 
+                                  data-bs-toggle="modal" 
+                                  data-bs-target="#sitesModal{{ client.id }}">
+                                {{ client.sites_client.count }}
+                            </span>
+                        </h6>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for site in client.sites_client.all|slice:":3" %}
+                            <span class="badge bg-light text-dark border">
+                                <i class="fas fa-map-marker-alt text-danger me-1"></i>
+                                {{ site.nom|truncatechars:15 }}
+                                {% if not site.actif %}
+                                <span class="badge bg-danger ms-1">Inactif</span>
+                                {% endif %}
+                            </span>
+                            {% empty %}
+                            <span class="text-muted small">Aucun site client</span>
+                            {% endfor %}
+                            {% if client.sites_client.count > 3 %}
+                            <span class="badge bg-secondary">+{{ client.sites_client.count|add:"-3" }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Statistiques -->
+                    <div class="row text-center mt-3 pt-2 border-top">
+                        <div class="col-6">
+                            <span class="h5">{{ client.reclamations.count }}</span>
+                            <br>
+                            <small class="text-muted">Réclamations</small>
+                        </div>
+                        <div class="col-6">
+                            <span class="h5">{{ client.programmes.count }}</span>
+                            <br>
+                            <small class="text-muted">Programmes</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Date de création -->
+                    <small class="text-muted d-block mt-2">
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        Client depuis le {{ client.date_creation|date:"d/m/Y" }}
+                    </small>
+                </div>
+                
+                <div class="card-footer bg-light">
+                    <div class="btn-group w-100" role="group">
+                        <a href="{% url 'reclamations:modifier_client' client.id %}" 
+                        class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit"></i> Modifier
+                        </a>
+                        <a href="{% url 'reclamations:supprimer_client' client.id %}" 
+                        class="btn btn-danger btn-sm">
+                            <i class="fas fa-trash"></i> Supprimer
+                        </a>
+                        <button type="button" class="btn btn-info btn-sm" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#sitesModal{{ client.id }}">
+                            <i class="fas fa-store-alt"></i> Sites ({{ client.sites_client.count }})
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal pour afficher tous les sites du client -->
+        <div class="modal fade" id="sitesModal{{ client.id }}" tabindex="-1" 
+             aria-labelledby="sitesModalLabel{{ client.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header {% if client.actif %}bg-primary{% else %}bg-secondary{% endif %} text-white">
+                        <h5 class="modal-title" id="sitesModalLabel{{ client.id }}">
+                            <i class="fas fa-store-alt me-2"></i>
+                            Sites de {{ client.nom }}
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        {% if client.sites_client.all %}
+                            <div class="row">
+                                {% for site in client.sites_client.all %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="modal-site-item {% if not site.actif %}bg-light{% endif %}">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="mb-2">
+                                                <i class="fas fa-store text-primary me-1"></i>
+                                                {{ site.nom }}
+                                                {% if not site.actif %}
+                                                <span class="badge bg-danger ms-2">Inactif</span>
+                                                {% endif %}
+                                            </h6>
+                                        </div>
+                                        
+                                        {% if site.adresse %}
+                                        <p class="mb-1 small">
+                                            <i class="fas fa-map-marker-alt text-danger me-1"></i>
+                                            {{ site.adresse }}
+                                        </p>
+                                        {% endif %}
+                                        
+                                        {% if site.ville or site.code_postal %}
+                                        <p class="mb-1 small">
+                                            <i class="fas fa-location-dot text-primary me-1"></i>
+                                            {{ site.code_postal|default:"" }} {{ site.ville|default:"" }}
+                                            {% if site.pays %} - {{ site.pays }}{% endif %}
+                                        </p>
+                                        {% endif %}
+                                        
+                                        {% if site.contact_principal %}
+                                        <p class="mb-1 small">
+                                            <i class="fas fa-user-tie text-success me-1"></i>
+                                            {{ site.contact_principal }}
+                                        </p>
+                                        {% endif %}
+                                        
+                                        <div class="mt-2">
+                                            {% if site.telephone %}
+                                            <span class="badge bg-light text-dark me-1">
+                                                <i class="fas fa-phone text-primary"></i>
+                                                {{ site.telephone }}
+                                            </span>
+                                            {% endif %}
+                                            
+                                            {% if site.email %}
+                                            <span class="badge bg-light text-dark">
+                                                <i class="fas fa-envelope text-primary"></i>
+                                                {{ site.email }}
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Aucun site client enregistré pour {{ client.nom }}.
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="modal-footer">
+                        <div class="text-muted small">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            Client depuis le {{ client.date_creation|date:"d/m/Y" }}
+                        </div>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info text-center py-5">
+                <i class="fas fa-users fa-4x text-muted mb-3"></i>
+                <h3>Aucun client trouvé</h3>
+                <p class="lead">Commencez par créer votre premier client.</p>
+                <a href="{% url 'reclamations:creer_client' %}" class="btn btn-primary btn-lg mt-3">
+                    <i class="fas fa-plus"></i> Créer un client
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Scripts de filtrage -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const statutFilter = document.getElementById('statutFilter');
+    const clients = document.querySelectorAll('.client-card-wrapper');
+    
+    function filterClients() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const statutValue = statutFilter.value;
+        
+        clients.forEach(client => {
+            const clientNom = client.dataset.clientNom;
+            const clientStatut = client.dataset.statut;
+            
+            let show = true;
+            
+            // Filtre recherche
+            if (searchTerm && !clientNom.includes(searchTerm)) {
+                show = false;
+            }
+            
+            // Filtre statut
+            if (statutValue && clientStatut !== statutValue) {
+                show = false;
+            }
+            
+            client.style.display = show ? 'block' : 'none';
+        });
+    }
+    
+    searchInput.addEventListener('input', filterClients);
+    statutFilter.addEventListener('change', filterClients);
+});
+
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('statutFilter').value = '';
+    
+    document.querySelectorAll('.client-card-wrapper').forEach(client => {
+        client.style.display = 'block';
+    });
+}
+</script>
+{% endblock %}

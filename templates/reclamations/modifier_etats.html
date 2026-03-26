@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Modifier les états - {{ reclamation.numero_reclamation }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="fas fa-flag"></i> Modifier les états - {{ reclamation.numero_reclamation }}</h1>
+            <p class="text-muted">Client: {{ reclamation.client.nom }}</p>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'reclamations:detail_reclamation' reclamation.id %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Mise à jour des états</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-info text-white">
+                                        État 4D
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="etat_4d" class="form-label">Statut</label>
+                                            <select class="form-control form-select" id="etat_4d" name="etat_4d">
+                                                {% for value, label in etat_choices %}
+                                                <option value="{{ value }}" {% if reclamation.etat_4d == value %}selected{% endif %}>
+                                                    {{ label }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="date_cloture_4d" class="form-label">Date de clôture 4D</label>
+                                            <input type="date" class="form-control" id="date_cloture_4d" name="date_cloture_4d" 
+                                                   value="{{ reclamation.date_cloture_4d|date:'Y-m-d' }}">
+                                            <small class="text-muted">La date sera automatiquement remplie quand l'état passe à "Clôturé"</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-warning">
+                                        État 8D
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="etat_8d" class="form-label">Statut</label>
+                                            <select class="form-control form-select" id="etat_8d" name="etat_8d">
+                                                {% for value, label in etat_choices %}
+                                                <option value="{{ value }}" {% if reclamation.etat_8d == value %}selected{% endif %}>
+                                                    {{ label }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="date_cloture_8d" class="form-label">Date de clôture 8D</label>
+                                            <input type="date" class="form-control" id="date_cloture_8d" name="date_cloture_8d"
+                                                   value="{{ reclamation.date_cloture_8d|date:'Y-m-d' }}">
+                                            <small class="text-muted">La date sera automatiquement remplie quand l'état passe à "Clôturé"</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header bg-secondary text-white">
+                                Clôture globale
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="cloture" name="cloture" 
+                                           {% if reclamation.cloture %}checked{% endif %}>
+                                    <label class="form-check-label" for="cloture">
+                                        Réclamation clôturée
+                                    </label>
+                                </div>
+                                
+                                {% if reclamation.date_cloture %}
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    Cette réclamation a été clôturée le {{ reclamation.date_cloture|date:"d/m/Y" }}
+                                </div>
+                                {% endif %}
+                                
+                                <div class="mb-3">
+                                    <label for="decision" class="form-label">Décision finale</label>
+                                    <textarea class="form-control" id="decision" name="decision" rows="3">{{ reclamation.decision }}</textarea>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="nqc" class="form-label">NQC</label>
+                                    <input type="text" class="form-control" id="nqc" name="nqc" value="{{ reclamation.nqc }}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Information:</strong> Les dates de clôture 4D et 8D sont automatiquement remplies 
+                            lorsque vous passez l'état correspondant à "Clôturé". Vous pouvez aussi les modifier manuellement.
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-save"></i> Enregistrer les modifications
+                            </button>
+                            <a href="{% url 'reclamations:detail_reclamation' reclamation.id %}" class="btn btn-secondary btn-lg">
+                                Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

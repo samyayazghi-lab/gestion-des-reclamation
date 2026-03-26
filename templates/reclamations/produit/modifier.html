@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Modifier Produit - {{ produit.product_number }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-edit"></i> Modifier Produit</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="product_number" class="form-label">Numéro produit *</label>
+                            <input type="text" class="form-control" id="product_number" 
+                                   name="product_number" value="{{ produit.product_number }}" required>
+                            <div class="form-text">Référence unique du produit</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="designation" class="form-label">Désignation</label>
+                            <input type="text" class="form-control" id="designation" 
+                                   name="designation" value="{{ produit.designation }}">
+                            <div class="form-text">Description courte du produit</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="actif" 
+                                       name="actif" {% if produit.actif %}checked{% endif %}>
+                                <label class="form-check-label" for="actif">
+                                    Produit actif
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Enregistrer
+                            </button>
+                            <a href="{% url 'reclamations:liste_produits' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Statistiques d'utilisation -->
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-chart-bar"></i> Utilisation du produit</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">
+                        <strong>Réclamations associées:</strong> 
+                        {{ produit.lignes_reclamation.count }}
+                    </p>
+                    {% if produit.lignes_reclamation.exists %}
+                    <small class="text-muted">
+                        Dernière utilisation: 
+                        {{ produit.lignes_reclamation.last.reclamation.date_reclamation|date:"d/m/Y" }}
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

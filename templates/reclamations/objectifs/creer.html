@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block title %}Créer objectifs annuels{% endblock %}
+
+{% block extra_css %}
+<style>
+    .objectifs-table {
+        font-size: 0.9rem;
+    }
+    .objectifs-table th {
+        background-color: #f8f9fa;
+        text-align: center;
+    }
+    .objectifs-table td {
+        vertical-align: middle;
+    }
+    .site-row:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="fas fa-plus-circle"></i> Créer des objectifs annuels</h1>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'reclamations:liste_objectifs' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour à la liste
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Définir les objectifs pour une année</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <label for="annee" class="form-label">Année *</label>
+                        <select class="form-control" id="annee" name="annee" required>
+                            <option value="">Sélectionnez une année</option>
+                            {% for annee in annees_disponibles %}
+                            <option value="{{ annee }}">{{ annee }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered objectifs-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 20%">Site</th>
+                                <th style="width: 15%">UAP</th>
+                                <th style="width: 25%">Objectif Rebut (%)</th>
+                                <th style="width: 25%">Objectif PPM Externe</th>
+                                <th style="width: 25%">Objectif Rework (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for site in sites %}
+                            <tr class="site-row">
+                                <td>
+                                    <strong>{{ site.nom }}</strong>
+                                </td>
+                                <td>{{ site.uap.nom }}</td>
+                                <td>
+                                    <input type="number" 
+                                           class="form-control" 
+                                           name="rebut_{{ site.id }}" 
+                                           value="0"
+                                           step="0.01"
+                                           min="0"
+                                           max="100"
+                                           required>
+                                </td>
+                                <td>
+                                    <input type="number" 
+                                           class="form-control" 
+                                           name="ppm_{{ site.id }}" 
+                                           value="0"
+                                           min="0"
+                                           required>
+                                </td>
+                                <td>
+                                    <input type="number" 
+                                           class="form-control" 
+                                           name="rework_{{ site.id }}" 
+                                           value="0"
+                                           step="0.01"
+                                           min="0"
+                                           max="100"
+                                           required>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center">Aucun site trouvé</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Informations :</strong>
+                    <ul class="mb-0 mt-2">
+                        <li><strong>Rebut (%) :</strong> Pourcentage de rebut accepté (0 à 100)</li>
+                        <li><strong>PPM Externe :</strong> Nombre de pièces défectueuses par million (PPM)</li>
+                        <li><strong>Rework (%) :</strong> Pourcentage de rework accepté (0 à 100)</li>
+                    </ul>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="fas fa-save"></i> Créer les objectifs
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

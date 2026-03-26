@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+
+{% block title %}Réclamations en retard / Alerte{% endblock %}
+
+{% block extra_css %}
+<style>
+    .retard-card {
+        border-left: 4px solid #dc3545;
+        transition: transform 0.2s;
+    }
+    .alerte-card {
+        border-left: 4px solid #ffc107;
+        transition: transform 0.2s;
+    }
+    .retard-card:hover, .alerte-card:hover {
+        transform: translateX(5px);
+    }
+    .deadline-badge {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+    }
+    .notification-type {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 10px;
+    }
+    .type-4d {
+        background-color: #17a2b8;
+        color: white;
+    }
+    .type-8d {
+        background-color: #6c757d;
+        color: white;
+    }
+    .statut-ouvert {
+        background-color: #dc3545;
+    }
+    .statut-en-cours {
+        background-color: #ffc107;
+        color: #333;
+    }
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="fas fa-bell"></i> Suivi des échéances</h1>
+            <p class="text-muted">Réclamations dont les délais de clôture sont dépassés ou proches de l'échéance</p>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'reclamations:dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <h2 class="mb-0">{{ reclamations_retard|length }}</h2>
+                    <p class="mb-0">Réclamation(s) en retard</p>
+                    <small>Délai dépassé</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h2 class="mb-0">{{ reclamations_alerte|length }}</h2>
+                    <p class="mb-0">Réclamation(s) en alerte</p>
+                    <small>Échéance proche</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h2 class="mb-0">{{ reclamations_retard|length|add:reclamations_alerte|length }}</h2>
+                    <p class="mb-0">Total à traiter</p>
+                    <small>Actions requises</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Réclamations en retard -->
+    {% if reclamations_retard %}
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-exclamation-triangle"></i> 
+                Réclamations en retard ({{ reclamations_retard|length }})
+            </h5>
+        </div>
+        <div class="card-body">
+            {% for item in reclamations_retard %}
+            <div class="card mb-3 retard-card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="notification-type type-{{ item.reclamation.get_etat_4d_display|lower|cut:' ' }}">
+                                    <i class="fas fa-flag"></i>
+                                </span>
+                                <h5 class="mb-0">
+                                    <a href="{% url 'reclamations:detail_reclamation' item.reclamation.id %}" class="text-dark">
+                                        {{ item.reclamation.numero_reclamation }}
+                                    </a>
+                                </h5>
+                                <span class="badge bg-danger ms-2">URGENT</span>
+                            </div>
+                            <p class="mb-1">
+                                <strong>Client :</strong> {{ item.reclamation.client.nom }}<br>
+                                <strong>Date création :</strong> {{ item.reclamation.date_reclamation|date:"d/m/Y" }}
+                            </p>
+                            <div class="mt-2">
+                                {% for notif in item.notifications %}
+                                <span class="badge bg-{% if notif.type == '4D' %}info{% else %}secondary{% endif %} me-2">
+                                    {{ notif.type }} - Délai: {{ notif.delai }} jours
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="mb-2">
+                                <strong>Dates limites :</strong>
+                                {% for notif in item.notifications %}
+                                <div class="text-danger">
+                                    {{ notif.type }} : {{ notif.date_limite|date:"d/m/Y" }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-2">
+                                <a href="{% url 'reclamations:modifier_etats' item.reclamation.id %}" 
+                                   class="btn btn-warning btn-sm">
+                                    <i class="fas fa-flag"></i> Modifier états
+                                </a>
+                                <a href="{% url 'reclamations:detail_reclamation' item.reclamation.id %}" 
+                                   class="btn btn-info btn-sm">
+                                    <i class="fas fa-eye"></i> Détail
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-success">
+        <i class="fas fa-check-circle"></i> Aucune réclamation en retard. Bravo !
+    </div>
+    {% endif %}
+
+    <!-- Réclamations en alerte -->
+    {% if reclamations_alerte %}
+    <div class="card">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="fas fa-clock"></i> 
+                Réclamations en alerte ({{ reclamations_alerte|length }})
+            </h5>
+        </div>
+        <div class="card-body">
+            {% for item in reclamations_alerte %}
+            <div class="card mb-3 alerte-card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="notification-type type-{{ item.reclamation.get_etat_4d_display|lower|cut:' ' }}">
+                                    <i class="fas fa-hourglass-half"></i>
+                                </span>
+                                <h5 class="mb-0">
+                                    <a href="{% url 'reclamations:detail_reclamation' item.reclamation.id %}" class="text-dark">
+                                        {{ item.reclamation.numero_reclamation }}
+                                    </a>
+                                </h5>
+                                <span class="badge bg-warning ms-2">ALERTE</span>
+                            </div>
+                            <p class="mb-1">
+                                <strong>Client :</strong> {{ item.reclamation.client.nom }}<br>
+                                <strong>Date création :</strong> {{ item.reclamation.date_reclamation|date:"d/m/Y" }}
+                            </p>
+                            <div class="mt-2">
+                                {% for alerte in item.alertes %}
+                                <span class="badge bg-{% if alerte.type == '4D' %}info{% else %}secondary{% endif %} me-2">
+                                    {{ alerte.type }} - J-{{ alerte.jours_restants }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="mb-2">
+                                <strong>Échéances :</strong>
+                                {% for alerte in item.alertes %}
+                                <div class="text-warning">
+                                    {{ alerte.type }} : {{ alerte.date_limite|date:"d/m/Y" }}
+                                    (J-{{ alerte.jours_restants }})
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-2">
+                                <a href="{% url 'reclamations:modifier_etats' item.reclamation.id %}" 
+                                   class="btn btn-warning btn-sm">
+                                    <i class="fas fa-flag"></i> Modifier états
+                                </a>
+                                <a href="{% url 'reclamations:detail_reclamation' item.reclamation.id %}" 
+                                   class="btn btn-info btn-sm">
+                                    <i class="fas fa-eye"></i> Détail
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Légende -->
+    <div class="card mt-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="fas fa-info-circle"></i> Légende</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <span class="badge bg-danger">URGENT</span>
+                    <span class="ms-2">Délai dépassé, action immédiate requise</span>
+                </div>
+                <div class="col-md-4">
+                    <span class="badge bg-warning">ALERTE</span>
+                    <span class="ms-2">Échéance proche (1-2 jours)</span>
+                </div>
+                <div class="col-md-4">
+                    <span class="badge bg-info">4D</span>
+                    <span class="ms-2">État 4D - 2 jours ouvrés</span>
+                    <span class="badge bg-secondary ms-2">8D</span>
+                    <span class="ms-2">État 8D - 10 jours ouvrés</span>
+                </div>
+            </div>
+            <div class="mt-2 text-muted small">
+                <i class="fas fa-calendar-week"></i> Les délais sont calculés en jours ouvrés (hors week-ends)
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+{% block title %}Nouveau Client{% endblock %}
+
+{% block extra_css %}
+<style>
+    .site-client-ligne {
+        background-color: #f8f9fa;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #28a745;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .site-client-ligne:hover {
+        background-color: #f0f0f0;
+    }
+    .remove-site {
+        cursor: pointer;
+        color: #dc3545;
+        font-size: 1.3rem;
+        transition: all 0.2s;
+    }
+    .remove-site:hover {
+        color: #bd2130;
+        transform: scale(1.1);
+    }
+    .btn-add-site {
+        border: 2px dashed #28a745;
+        background-color: white;
+        color: #28a745;
+        padding: 10px;
+        width: 100%;
+        font-weight: bold;
+        transition: all 0.3s;
+    }
+    .btn-add-site:hover {
+        background-color: #28a745;
+        color: white;
+        border: 2px dashed white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Nouveau Client</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="clientForm">
+                        {% csrf_token %}
+                        
+                        <!-- Informations du client -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0">Informations générales</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="nom" class="form-label">Nom du client *</label>
+                                        <input type="text" class="form-control" id="nom" name="nom" required autofocus>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="email" name="email">
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label for="telephone" class="form-label">Téléphone</label>
+                                        <input type="text" class="form-control" id="telephone" name="telephone">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="actif" name="actif" checked>
+                                        <label class="form-check-label" for="actif">
+                                            Client actif
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sites client (multiples) -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0"><i class="fas fa-store-alt"></i> Sites du client</h6>
+                                <button type="button" class="btn btn-light btn-sm" id="addSiteClient">
+                                    <i class="fas fa-plus"></i> Ajouter un site
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="sites-client-container">
+                                    <!-- Les sites seront ajoutés ici -->
+                                </div>
+                                
+                                <div class="alert alert-info" id="no-sites-message">
+                                    <i class="fas fa-info-circle"></i> 
+                                    Cliquez sur "Ajouter un site" pour ajouter les établissements du client.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-save"></i> Créer le client
+                            </button>
+                            <a href="{% url 'reclamations:liste_clients' %}" class="btn btn-secondary btn-lg">
+                                Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let siteCount = 0;
+
+document.getElementById('addSiteClient').addEventListener('click', function() {
+    addSiteClientLine();
+});
+
+function addSiteClientLine(data = {}) {
+    const container = document.getElementById('sites-client-container');
+    
+    const template = `
+        <div class="site-client-ligne" id="site-${siteCount}">
+            <div class="row mb-2">
+                <div class="col-md-8">
+                    <label class="form-label">Nom du site *</label>
+                    <input type="text" class="form-control" name="site_client_nom[]" value="${data.nom || ''}" required>
+                </div>
+                <div class="col-md-4 text-end">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <i class="fas fa-trash-alt remove-site" onclick="removeSite(${siteCount})"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-2">
+                <div class="col-md-6">
+                    <label class="form-label">Adresse</label>
+                    <input type="text" class="form-control" name="site_client_adresse[]" value="${data.adresse || ''}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Ville</label>
+                    <input type="text" class="form-control" name="site_client_ville[]" value="${data.ville || ''}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Code postal</label>
+                    <input type="text" class="form-control" name="site_client_cp[]" value="${data.code_postal || ''}">
+                </div>
+            </div>
+            
+            <div class="row mb-2">
+                <div class="col-md-4">
+                    <label class="form-label">Pays</label>
+                    <input type="text" class="form-control" name="site_client_pays[]" value="${data.pays || 'France'}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Contact principal</label>
+                    <input type="text" class="form-control" name="site_client_contact[]" value="${data.contact_principal || ''}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Téléphone</label>
+                    <input type="text" class="form-control" name="site_client_telephone[]" value="${data.telephone || ''}">
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" name="site_client_email[]" value="${data.email || ''}">
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" name="site_client_actif[]" id="actif_${siteCount}" checked>
+                        <label class="form-check-label" for="actif_${siteCount}">
+                            Site actif
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', template);
+    document.getElementById('no-sites-message').style.display = 'none';
+    siteCount++;
+}
+
+function removeSite(id) {
+    const site = document.getElementById(`site-${id}`);
+    if (site) {
+        site.remove();
+    }
+    
+    // Afficher le message si plus de sites
+    if (document.querySelectorAll('.site-client-ligne').length === 0) {
+        document.getElementById('no-sites-message').style.display = 'block';
+    }
+}
+
+// Ajouter une première ligne par défaut
+addSiteClientLine();
+
+// Validation du formulaire
+document.getElementById('clientForm').addEventListener('submit', function(e) {
+    const sites = document.querySelectorAll('.site-client-ligne');
+    const siteNoms = document.querySelectorAll('input[name="site_client_nom[]"]');
+    let hasEmptyName = false;
+    
+    siteNoms.forEach(input => {
+        if (!input.value.trim()) {
+            hasEmptyName = true;
+            input.classList.add('is-invalid');
+        } else {
+            input.classList.remove('is-invalid');
+        }
+    });
+    
+    if (hasEmptyName) {
+        e.preventDefault();
+        alert('Veuillez remplir tous les noms des sites clients ou supprimer les lignes vides.');
+    }
+});
+</script>
+{% endblock %}

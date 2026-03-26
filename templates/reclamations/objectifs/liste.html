@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Objectifs annuels par site{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="fas fa-bullseye"></i> Objectifs annuels par site</h1>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'reclamations:creer_objectifs_annee' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nouveaux objectifs (année)
+            </a>
+        </div>
+    </div>
+
+    {% for data in objectifs_par_annee %}
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Objectifs {{ data.annee }}</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Site</th>
+                            <th>UAP</th>
+                            <th>Objectif Rebut (%)</th>
+                            <th>Objectif PPM Externe</th>
+                            <th>Objectif Rework (%)</th>
+                        </thead>
+                    <tbody>
+                        {% for obj in data.objectifs %}
+                        <tr>
+                            <td><strong>{{ obj.site.nom }}</strong></td>
+                            <td>{{ obj.site.uap.nom }}</td>
+                            <td class="text-center">{{ obj.objectif_rebut|floatformat:2 }}%</td>
+                            <td class="text-center">{{ obj.objectif_ppm_externe|floatformat:0 }}</td>
+                            <td class="text-center">{{ obj.objectif_rework|floatformat:2 }}%</td>
+                         </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-secondary">
+                            <td colspan="2"><strong>Moyenne / Global</strong></td>
+                            <td class="text-center">
+                                <strong>{{ data.moyenne_rebut|floatformat:2 }}%</strong>
+                            </td>
+                            <td class="text-center">
+                                <strong>{{ data.moyenne_ppm|floatformat:0 }}</strong>
+                            </td>
+                            <td class="text-center">
+                                <strong>{{ data.moyenne_rework|floatformat:2 }}%</strong>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            <div class="mt-3">
+                <a href="{% url 'reclamations:modifier_objectifs_annee' data.annee %}" class="btn btn-warning btn-sm">
+                    <i class="fas fa-edit"></i> Modifier les objectifs {{ data.annee }}
+                </a>
+                <a href="{% url 'reclamations:supprimer_objectifs_annee' data.annee %}" class="btn btn-danger btn-sm">
+                    <i class="fas fa-trash"></i> Supprimer les objectifs {{ data.annee }}
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> Aucun objectif défini.
+        <a href="{% url 'reclamations:creer_objectifs_annee' %}">Créez les objectifs pour une année</a>.
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

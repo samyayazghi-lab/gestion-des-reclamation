@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Tableau de bord - Gestion des Réclamations</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 20px;
+        }
+        h1 {
+            color: #4CAF50;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #333;
+            margin-top: 20px;
+            background-color: #f0f0f0;
+            padding: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .kpi-card {
+            display: inline-block;
+            width: 23%;
+            margin: 1%;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        .kpi-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 10px;
+            color: #999;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tableau de bord - Gestion des Réclamations</h1>
+    <p>Exporté le : {{ date_export|date:"d/m/Y H:i" }}</p>
+    
+    <h2>Indicateurs clés</h2>
+    <div>
+        <div class="kpi-card">
+            <div>Total réclamations</div>
+            <div class="kpi-value">{{ total_reclamations }}</div>
+        </div>
+        <div class="kpi-card">
+            <div>Réclamations ouvertes</div>
+            <div class="kpi-value">{{ reclamations_ouvertes }}</div>
+        </div>
+        <div class="kpi-card">
+            <div>Réclamations clôturées</div>
+            <div class="kpi-value">{{ reclamations_cloturees }}</div>
+        </div>
+        <div class="kpi-card">
+            <div>Taux de clôture</div>
+            <div class="kpi-value">{{ taux_cloture }}%</div>
+        </div>
+    </div>
+    
+    <div>
+        <div class="kpi-card">
+            <div>Délai moyen</div>
+            <div class="kpi-value">{{ duree_moyenne }} jours</div>
+        </div>
+        <div class="kpi-card">
+            <div>Taux de réactivité</div>
+            <div class="kpi-value">{{ taux_reactivite }}%</div>
+        </div>
+        <div class="kpi-card">
+            <div>PPM Global</div>
+            <div class="kpi-value">{{ ppm_global|floatformat:0 }}</div>
+        </div>
+        <div class="kpi-card">
+            <div>Année</div>
+            <div class="kpi-value">{{ annee_courante }}</div>
+        </div>
+    </div>
+    
+    <h2>Top 10 clients</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Client</th>
+                <th>Nombre de réclamations</th>
+            </thead>
+        </thead>
+        <tbody>
+            {% for label, value in clients_labels|zip:clients_data %}
+            <tr>
+                <td>{{ label }}</td>
+                <td>{{ value }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <h2>Répartition par UAP</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>UAP</th>
+                <th>Nombre de réclamations</th>
+            </thead>
+        </thead>
+        <tbody>
+            {% for label, value in uap_labels|zip:uap_data %}
+            <tr>
+                <td>{{ label }}</td>
+                <td>{{ value }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="page-break"></div>
+    
+    <h2>Évolution mensuelle</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Mois</th>
+                <th>Nombre de réclamations</th>
+            </thead>
+        </thead>
+        <tbody>
+            {% for label, value in mois_labels|zip:mois_data %}
+            <tr>
+                <td>{{ label }}</td>
+                <td>{{ value }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <h2>Répartition par type de NC</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Nombre</th>
+            </thead>
+        </thead>
+        <tbody>
+            {% for type in type_nc_stats %}
+            <tr>
+                <td>{{ type.label }}</td>
+                <td>{{ type.total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <h2>Top 5 produits les plus réclamés</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Produit</th>
+                <th>Désignation</th>
+                <th>Nombre</th>
+            </thead>
+        </thead>
+        <tbody>
+            {% for produit in top_produits %}
+            <tr>
+                <td>{{ produit.product_number }}</td>
+                <td>{{ produit.designation|default:"-" }}</td>
+                <td>{{ produit.nb_reclamations }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="footer">
+        Rapport généré automatiquement - Gestion des Réclamations
+    </div>
+</body>
+</html>

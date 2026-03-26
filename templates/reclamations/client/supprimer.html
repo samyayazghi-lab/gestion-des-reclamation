@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Supprimer le client - {{ client.nom }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Confirmer la suppression</h5>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Êtes-vous sûr de vouloir supprimer le client <strong>{{ client.nom }}</strong> ?</p>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Informations du client :</strong>
+                        <ul class="mt-2 mb-0">
+                            <li><strong>Nom:</strong> {{ client.nom }}</li>
+                            {% if client.email %}
+                            <li><strong>Email:</strong> {{ client.email }}</li>
+                            {% endif %}
+                            {% if client.telephone %}
+                            <li><strong>Téléphone:</strong> {{ client.telephone }}</li>
+                            {% endif %}
+                            <li><strong>Statut:</strong> {% if client.actif %}Actif{% else %}Inactif{% endif %}</li>
+                            <li><strong>Réclamations:</strong> {{ client.reclamations.count }}</li>
+                            <li><strong>Sites client:</strong> {{ client.sites_client.count }}</li>
+                            <li><strong>Programmes:</strong> {{ client.programmes.count }}</li>
+                        </ul>
+                    </div>
+                    
+                    {% if client.reclamations.exists %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <strong>Attention !</strong> Ce client a {{ client.reclamations.count }} réclamation(s) associée(s).<br>
+                        Vous ne pouvez pas supprimer ce client tant que ces réclamations existent.
+                        <div class="mt-2">
+                            <small>Réclamations concernées :</small>
+                            <ul>
+                                {% for rec in client.reclamations.all|slice:":5" %}
+                                <li>{{ rec.numero_reclamation }} - {{ rec.date_reclamation|date:"d/m/Y" }}</li>
+                                {% endfor %}
+                                {% if client.reclamations.count > 5 %}
+                                <li>... et {{ client.reclamations.count|add:"-5" }} autre(s)</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <strong>Attention !</strong> Cette action est irréversible. 
+                        Tous les sites client et programmes associés seront également supprimés.
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="text-center">
+                            {% if client.reclamations.exists %}
+                            <a href="{% url 'reclamations:liste_clients' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-arrow-left"></i> Retour à la liste
+                            </a>
+                            {% else %}
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-trash"></i> Oui, supprimer définitivement
+                            </button>
+                            <a href="{% url 'reclamations:liste_clients' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times"></i> Annuler
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
