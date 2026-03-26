@@ -26,6 +26,9 @@ import pandas as pd
 from .notifications import NotificationService
 from django.core.paginator import Paginator
 from django.db import transaction
+import requests
+import re
+import threading
 
 # ================ EXPORT PDF  ================
 @login_required
@@ -2321,3 +2324,119 @@ def recherche_produits_ajax(request):
         'has_previous': produits_page.has_previous()
     })
 
+# Add this at the top with other imports
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import random  # For now, we'll use simple responses
+
+def chat_view(request):
+    """Show the chat page"""
+    return render(request, 'reclamations/chat.html')
+
+@csrf_exempt  # For testing only! Remove later
+
+
+@csrf_exempt
+@csrf_exempt
+# Add this at the bottom of urls.py or call it once when Django starts
+# It "wakes up" Ollama so the first user message isn't slow
+
+
+def warm_up_ollama():
+    try:
+        requests.post(
+            'http://localhost:11434/api/chat',
+            json={
+                'model': 'phi3:mini',
+                'messages': [{'role': 'user', 'content': 'bonjour'}],
+                'stream': False,
+                'options': {'num_predict': 1}
+            },
+            timeout=30
+        )
+    except Exception:
+        pass
+
+threading.Thread(target=warm_up_ollama, daemon=True).start()
+
+
+def chat_api(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+
+    user_message = request.POST.get('message', '').strip()
+    if not user_message:
+        return JsonResponse({'response': 'Veuillez écrire un message.'})
+
+    # ========== STEP 1: DB LOOKUP (only if complaint number present) ==========
+    context_data = ""
+    complaint_pattern = r'REC[-_]?\d{4}[-_]?\d{3,4}'
+    found_complaints = re.findall(complaint_pattern, user_message.upper())
+
+    if found_complaints:
+        for complaint_num in found_complaints:
+            try:
+                complaint = Reclamation.objects.filter(
+                    numero_reclamation__icontains=complaint_num
+                ).first()
+
+                if complaint:
+                    context_data += (
+                        f"Réclamation {complaint.numero_reclamation}: "
+                        f"statut={complaint.get_etat_8d_display()}, "
+                        f"client={complaint.client.nom if complaint.client else 'N/A'}, "
+                        f"date={complaint.date_reclamation.strftime('%d/%m/%Y')}, "
+                        f"clôturée={'oui' if complaint.cloture else 'non'}."
+                    )
+                else:
+                    context_data += f"Réclamation {complaint_num} introuvable."
+            except Exception as e:
+                context_data += f"Erreur pour {complaint_num}: {str(e)}"
+
+    # ========== STEP 2: BUILD PROMPT ==========
+    system_prompt = (
+        "Tu es un assistant pour un système de gestion des réclamations. "
+        "Réponds UNIQUEMENT en français. "
+        "Réponds en UNE seule phrase courte et directe. "
+        "Ne répète pas la question. "
+        "Si tu ne sais pas, dis-le en une phrase."
+    )
+
+    user_prompt = f"Données: {context_data}\nQuestion: {user_message}" if context_data else user_message
+
+    # ========== STEP 3: CALL OLLAMA ==========
+    try:
+        response = requests.post(
+            'http://localhost:11434/api/chat',
+            json={
+                'model': 'phi3:mini',
+                'messages': [
+                    {'role': 'system', 'content': system_prompt},
+                    {'role': 'user',   'content': user_prompt}
+                ],
+                'stream': False,
+                'options': {
+                    'temperature': 0.1,
+                    'num_predict': 60,
+                    'num_ctx': 512,
+                }
+            },
+            timeout=20
+        )
+
+        if response.status_code == 200:
+            reply = response.json().get('message', {}).get('content', '').strip()
+            if not reply:
+                reply = "Désolé, je n'ai pas pu générer de réponse."
+        else:
+            reply = f"Erreur {response.status_code}, réessayez."
+
+    except requests.exceptions.ConnectionError:
+        reply = "Ollama n'est pas démarré. Lance 'ollama serve' dans un terminal."
+    except requests.exceptions.Timeout:
+        reply = "Délai dépassé, réessayez avec un message plus court."
+    except Exception as e:
+        reply = f"Erreur inattendue: {str(e)}"
+
+    return JsonResponse({'response': reply})

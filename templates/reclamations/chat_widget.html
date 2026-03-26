@@ -1,0 +1,299 @@
+<!-- Chat Widget Styles -->
+<style>
+.chat-widget {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.chat-button {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+
+.chat-button:hover {
+    transform: scale(1.1);
+}
+
+.chat-window {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 350px;
+    height: 500px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #e0e0e0;
+}
+
+.chat-window.open {
+    display: flex;
+}
+
+.chat-header {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    padding: 12px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.chat-header h4 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.chat-header .close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    background: #f9f9f9;
+    font-size: 13px;
+}
+
+.chat-message {
+    margin-bottom: 12px;
+    display: flex;
+}
+
+.chat-message.user {
+    justify-content: flex-end;
+}
+
+.chat-message.bot {
+    justify-content: flex-start;
+}
+
+.message-bubble {
+    max-width: 80%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    word-wrap: break-word;
+}
+
+.chat-message.user .message-bubble {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.chat-message.bot .message-bubble {
+    background: white;
+    color: #333;
+    border: 1px solid #e0e0e0;
+    border-bottom-left-radius: 4px;
+}
+
+.chat-input-area {
+    padding: 10px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 8px;
+    background: white;
+}
+
+.chat-input-area input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    outline: none;
+    font-size: 13px;
+}
+
+.chat-input-area input:focus {
+    border-color: #4CAF50;
+}
+
+.chat-input-area button {
+    padding: 8px 15px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.chat-typing {
+    padding: 5px 12px;
+    color: #999;
+    font-size: 12px;
+    font-style: italic;
+    display: none;
+}
+
+.chat-typing.active {
+    display: block;
+}
+</style>
+
+<div class="chat-widget">
+    <button class="chat-button" onclick="toggleChat()">
+        💬
+    </button>
+
+    <div class="chat-window" id="chatWindow">
+        <div class="chat-header" onclick="toggleChat()">
+            <h4>🤖 Assistant Réclamations</h4>
+            <button class="close-btn" onclick="toggleChat()">×</button>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-message bot">
+                <div class="message-bubble">
+                    👋 Bonjour! Comment puis-je vous aider avec vos réclamations?
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-typing" id="chatTyping">
+            🤖 En cours de rédaction...
+        </div>
+
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Écrivez votre message..." onkeypress="handleChatKeyPress(event)">
+            <button onclick="sendChatMessage()">Envoyer</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleChat() {
+    const chatWindow = document.getElementById('chatWindow');
+    chatWindow.classList.toggle('open');
+}
+
+function handleChatKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendChatMessage();
+    }
+}
+
+// Quick replies handled client-side — instant, no server call
+const QUICK_REPLIES = {
+    'bonjour': 'Bonjour! Comment puis-je vous aider?',
+    'salut':   'Salut! Comment puis-je vous aider?',
+    'hello':   'Bonjour! Comment puis-je vous aider?',
+    'hi':      'Bonjour! Comment puis-je vous aider?',
+    'bonsoir': 'Bonsoir! Comment puis-je vous aider?',
+    'merci':   'Avec plaisir!',
+    'thanks':  'Avec plaisir!',
+    'au revoir': 'Au revoir! Bonne journée.',
+    'bye':     'Au revoir! Bonne journée.',
+};
+
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    if (!message) return;
+
+    const messagesDiv = document.getElementById('chatMessages');
+    const typingDiv   = document.getElementById('chatTyping');
+
+    // Add user message
+    messagesDiv.innerHTML += `
+        <div class="chat-message user">
+            <div class="message-bubble">${escapeHtml(message)}</div>
+        </div>
+    `;
+    input.value = '';
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    // Check for instant client-side reply first
+    const quickReply = QUICK_REPLIES[message.toLowerCase().trim()];
+    if (quickReply) {
+        messagesDiv.innerHTML += `
+            <div class="chat-message bot">
+                <div class="message-bubble">${escapeHtml(quickReply)}</div>
+            </div>
+        `;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        return;
+    }
+
+    // Show typing indicator
+    typingDiv.classList.add('active');
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    // Send to server
+    fetch('/chat/api/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: 'message=' + encodeURIComponent(message)
+    })
+    .then(response => response.json())
+    .then(data => {
+        typingDiv.classList.remove('active');
+        messagesDiv.innerHTML += `
+            <div class="chat-message bot">
+                <div class="message-bubble">${escapeHtml(data.response)}</div>
+            </div>
+        `;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    })
+    .catch(() => {
+        typingDiv.classList.remove('active');
+        messagesDiv.innerHTML += `
+            <div class="chat-message bot">
+                <div class="message-bubble">Désolé, une erreur est survenue. Veuillez réessayer.</div>
+            </div>
+        `;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>

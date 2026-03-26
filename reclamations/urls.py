@@ -76,4 +76,6 @@ urlpatterns = [
     path('api/sites-client-par-client/', views.sites_client_par_client, name='sites_client_par_client'),
     path('api/recherche-produits/', views.recherche_produits, name='recherche_produits'),
     path('api/recherche-produits-ajax/', views.recherche_produits_ajax, name='recherche_produits_ajax'),
+    path('chat/', views.chat_view, name='chat'),
+    path('chat/api/', views.chat_api, name='chat_api'),
 ]
